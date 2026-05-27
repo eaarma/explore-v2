@@ -1,0 +1,132 @@
+import { StyleSheet } from "react-native";
+
+export const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#e5e7eb",
+  },
+  map: {
+    flex: 1,
+  },
+  tripFilterCard: {
+    position: "absolute",
+    width: 230,
+    borderRadius: 22,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 8,
+    shadowColor: "#0F172A",
+    shadowOffset: {
+      width: 0,
+      height: 12,
+    },
+    shadowOpacity: 0.14,
+    shadowRadius: 24,
+    elevation: 10,
+  },
+  tripFilterHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  tripFilterEyebrow: {
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
+  tripFilterTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    lineHeight: 21,
+  },
+  tripFilterHint: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  tripFilterClearButton: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  tripFilterClearButtonText: {
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  statusCard: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    minWidth: 168,
+    gap: 8,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 24,
+    backgroundColor: "rgba(255, 255, 255, 0.94)",
+    shadowColor: "#0F172A",
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
+    shadowOpacity: 0.12,
+    shadowRadius: 22,
+    elevation: 6,
+  },
+  scaleCard: {
+    position: "absolute",
+    alignItems: "flex-start",
+    gap: 6,
+  },
+  scaleLabel: {
+    color: "#334155",
+    fontSize: 12,
+    fontWeight: "700",
+    textShadowColor: "rgba(255, 255, 255, 0.92)",
+    textShadowOffset: {
+      width: 0,
+      height: 0,
+    },
+    textShadowRadius: 8,
+  },
+  scaleBar: {
+    height: 7,
+    borderTopWidth: 2,
+    borderLeftWidth: 2,
+    borderRightWidth: 2,
+    borderColor: "#0F172A",
+  },
+  statusText: {
+    color: "#334155",
+    fontSize: 13,
+  },
+  errorText: {
+    color: "#b91c1c",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  discoveryBanner: {
+    position: "absolute",
+    left: 16,
+    right: 16,
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    shadowColor: "#0F172A",
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.16,
+    shadowRadius: 18,
+    elevation: 7,
+  },
+  discoveryBannerText: {
+    color: "#0F172A",
+    fontSize: 14,
+    fontWeight: "700",
+    lineHeight: 20,
+  },
+});
