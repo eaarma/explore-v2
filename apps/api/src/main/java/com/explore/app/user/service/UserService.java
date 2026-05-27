@@ -84,6 +84,7 @@ public class UserService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         user.setName(normalizeRequiredName(request.getName()));
+        user.setRole(request.getRole());
         user.setStatus(request.getStatus());
 
         return userMapper.toResponse(user);
