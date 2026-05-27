@@ -4,8 +4,12 @@ import com.explore.app.user.mapper.UserMapper;
 import com.explore.app.user.model.User;
 import com.explore.app.user.repository.UserRepository;
 import com.explore.app.user.dto.CreateUserRequest;
+import com.explore.app.user.dto.CurrentUserUpdateRequest;
 import com.explore.app.user.dto.UpdateUserRequest;
 import com.explore.app.user.dto.UserResponse;
+import com.explore.app.journeys.repository.JourneyCompletionRepository;
+import com.explore.app.locations.repository.LocationDiscoveryRepository;
+import com.explore.app.trips.repository.TripRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -22,6 +26,9 @@ public class UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
+    private final LocationDiscoveryRepository locationDiscoveryRepository;
+    private final JourneyCompletionRepository journeyCompletionRepository;
+    private final TripRepository tripRepository;
 
     @Transactional
     public UserResponse createUser(CreateUserRequest request) {
@@ -54,14 +61,55 @@ public class UserService {
     }
 
     @Transactional
+    public UserResponse updateCurrentUser(String email, CurrentUserUpdateRequest request) {
+        User user = findUserByEmail(email);
+        user.setName(normalizeRequiredName(request.getName()));
+        return userMapper.toResponse(user);
+    }
+
+    @Transactional
+    public void deleteCurrentUser(String email) {
+        User user = findUserByEmail(email);
+        UUID userId = user.getId();
+
+        tripRepository.deleteAll(tripRepository.findAllByUserId(userId));
+        locationDiscoveryRepository.deleteAll(locationDiscoveryRepository.findByUserId(userId));
+        journeyCompletionRepository.deleteAll(journeyCompletionRepository.findByUserId(userId));
+        userRepository.delete(user);
+    }
+
+    @Transactional
     public UserResponse updateUser(UUID id, UpdateUserRequest request) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        user.setName(request.getName().trim());
+        user.setName(normalizeRequiredName(request.getName()));
         user.setStatus(request.getStatus());
 
         return userMapper.toResponse(user);
+    }
+
+    private User findUserByEmail(String email) {
+        String normalizedEmail = normalizeRequiredEmail(email);
+
+        return userRepository.findByEmail(normalizedEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+    }
+
+    private String normalizeRequiredEmail(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            throw new IllegalArgumentException("User email is required");
+        }
+
+        return email.trim().toLowerCase();
+    }
+
+    private String normalizeRequiredName(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("User name is required");
+        }
+
+        return name.trim();
     }
 }
 

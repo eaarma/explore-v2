@@ -44,8 +44,8 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class DiscoveryService {
 
-    private static final double DISCOVERY_RADIUS_METERS = 50d;
-    private static final double MAX_ALLOWED_ACCURACY_METERS = 100d;
+    private static final double DISCOVERY_RADIUS_METERS = 80d;
+    private static final double MAX_ALLOWED_ACCURACY_METERS = 80d;
 
     private final UserRepository userRepository;
     private final LocationRepository locationRepository;
