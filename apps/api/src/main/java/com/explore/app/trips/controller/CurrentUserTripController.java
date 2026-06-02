@@ -6,6 +6,7 @@ import com.explore.app.trips.dto.TripLocationAddRequest;
 import com.explore.app.trips.dto.TripReorderRequest;
 import com.explore.app.trips.dto.TripResponse;
 import com.explore.app.trips.service.TripService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -34,7 +35,7 @@ public class CurrentUserTripController {
     @PostMapping
     public TripResponse createTrip(
             Authentication authentication,
-            @RequestBody TripCreateRequest request) {
+            @Valid @RequestBody TripCreateRequest request) {
         return tripService.createTrip(authentication.getName(), request);
     }
 
@@ -42,7 +43,7 @@ public class CurrentUserTripController {
     public TripResponse addLocationToTrip(
             Authentication authentication,
             @PathVariable Long tripId,
-            @RequestBody TripLocationAddRequest request) {
+            @Valid @RequestBody TripLocationAddRequest request) {
         return tripService.addLocationToTrip(authentication.getName(), tripId, request.getLocationId());
     }
 
@@ -50,7 +51,7 @@ public class CurrentUserTripController {
     public TripResponse addJourneyToTrip(
             Authentication authentication,
             @PathVariable Long tripId,
-            @RequestBody TripJourneyAddRequest request) {
+            @Valid @RequestBody TripJourneyAddRequest request) {
         return tripService.addJourneyToTrip(authentication.getName(), tripId, request.getJourneyId());
     }
 
@@ -74,7 +75,7 @@ public class CurrentUserTripController {
     public TripResponse reorderTripItems(
             Authentication authentication,
             @PathVariable Long tripId,
-            @RequestBody TripReorderRequest request) {
+            @Valid @RequestBody TripReorderRequest request) {
         return tripService.reorderTripItems(authentication.getName(), tripId, request);
     }
 }

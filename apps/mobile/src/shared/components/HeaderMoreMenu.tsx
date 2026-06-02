@@ -208,7 +208,9 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   menuItem: {
-    paddingHorizontal: 16,
+    marginHorizontal: 6,
+    borderRadius: 12,
+    paddingHorizontal: 10,
     paddingVertical: 12,
   },
   menuItemText: {

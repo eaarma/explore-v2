@@ -8,7 +8,6 @@ import {
 } from "react";
 import { FlashList } from "@shopify/flash-list";
 import {
-  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -31,6 +30,7 @@ import {
   SectionSearchField,
 } from "@/src/shared/components/SectionControls";
 import { useColorScheme } from "@/src/shared/hooks/use-color-scheme";
+import { showAppToast } from "@/src/shared/store/appFeedbackStore";
 import { normalizeSearchValue } from "@/src/shared/utils/browseSectionUtils";
 
 const USER_SORT_OPTIONS = [
@@ -273,12 +273,18 @@ export function AdminUsersSection({ colors }: AdminUsersSectionProps) {
       setIsRoleMenuOpen(false);
       setIsStatusMenuOpen(false);
 
-      Alert.alert("User saved", "The user changes were saved.");
+      showAppToast({
+        text: "The user changes were saved.",
+        tone: "success",
+      });
     } catch (error) {
-      Alert.alert(
-        "Save failed",
-        getApiErrorMessage(error, "Could not save the user changes right now."),
-      );
+      showAppToast({
+        text: getApiErrorMessage(
+          error,
+          "Could not save the user changes right now.",
+        ),
+        tone: "error",
+      });
     } finally {
       setIsSavingUser(false);
     }

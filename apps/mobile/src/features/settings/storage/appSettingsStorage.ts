@@ -9,17 +9,25 @@ import {
   isAppAppearanceSetting,
   type AppAppearanceSetting,
 } from "@/src/features/settings/utils/appAppearance";
+import {
+  DEFAULT_APP_TITLE,
+  DEFAULT_CONTACT_EMAIL,
+} from "@/src/shared/branding/appBranding";
 
 const APP_SETTINGS_KEY = "appSettings";
 
 export type StoredAppSettings = {
+  appTitle: string;
   appearancePreference: AppAppearanceSetting;
+  contactEmail: string;
   defaultMapStyle: MapStyleKey;
   offlineRoadMapEnabled: boolean;
 };
 
 export const DEFAULT_APP_SETTINGS: StoredAppSettings = {
+  appTitle: DEFAULT_APP_TITLE,
   appearancePreference: "system",
+  contactEmail: DEFAULT_CONTACT_EMAIL,
   defaultMapStyle: DEFAULT_MAP_STYLE_KEY,
   offlineRoadMapEnabled: true,
 };
@@ -51,10 +59,25 @@ export async function saveStoredAppSettings(settings: StoredAppSettings) {
 function sanitizeStoredAppSettings(
   settings: Partial<StoredAppSettings>,
 ): StoredAppSettings {
+  const normalizedAppTitle =
+    typeof settings.appTitle === "string" ? settings.appTitle.trim() : "";
+  const normalizedContactEmail =
+    typeof settings.contactEmail === "string"
+      ? settings.contactEmail.trim()
+      : "";
+
   return {
+    appTitle:
+      normalizedAppTitle.length > 0
+        ? normalizedAppTitle
+        : DEFAULT_APP_SETTINGS.appTitle,
     appearancePreference: isAppAppearanceSetting(settings.appearancePreference)
       ? settings.appearancePreference
       : DEFAULT_APP_SETTINGS.appearancePreference,
+    contactEmail:
+      normalizedContactEmail.length > 0
+        ? normalizedContactEmail
+        : DEFAULT_APP_SETTINGS.contactEmail,
     defaultMapStyle: isMapStyleKey(settings.defaultMapStyle)
       ? settings.defaultMapStyle
       : DEFAULT_APP_SETTINGS.defaultMapStyle,

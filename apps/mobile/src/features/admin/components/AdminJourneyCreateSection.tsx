@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import {
-  Alert,
   Modal,
   type NativeSyntheticEvent,
   Pressable,
@@ -35,7 +34,9 @@ import { type Location } from "@/src/features/locations/types/locationTypes";
 import { useAppSettingsStore } from "@/src/features/settings/store/appSettingsStore";
 import { getApiErrorMessage } from "@/src/shared/api/apiError";
 import { CategoryImagePlaceholder } from "@/src/shared/components/CategoryImagePlaceholder";
+import { InlineFeedbackCard } from "@/src/shared/components/InlineFeedbackCard";
 import { useColorScheme } from "@/src/shared/hooks/use-color-scheme";
+import { showAppToast } from "@/src/shared/store/appFeedbackStore";
 import {
   cacheActiveContent,
   cacheJourneyLocations,
@@ -62,6 +63,7 @@ type JourneyCreateDraft = {
   difficulty: string;
   polyline: string;
   notes: string;
+  traits: string[];
 };
 
 type CoordinateSelection = {
@@ -95,7 +97,8 @@ const INITIAL_CREATE_DRAFT: JourneyCreateDraft = {
   distance: "0",
   difficulty: "0",
   polyline: "",
-  notes: "0",
+  notes: "",
+  traits: [],
 };
 
 export function AdminJourneyCreateSection() {
@@ -121,6 +124,7 @@ export function AdminJourneyCreateSection() {
   const [availableLocationsError, setAvailableLocationsError] = useState<
     string | null
   >(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const categoryLabel = normalizeCategory(draft.category);
   const publicationStatusLabel = getPublicationStatusLabel(Number(draft.status));
@@ -136,6 +140,7 @@ export function AdminJourneyCreateSection() {
       ...currentDraft,
       [field]: value,
     }));
+    setFormError(null);
   }
 
   function clearForm() {
@@ -148,6 +153,7 @@ export function AdminJourneyCreateSection() {
     setIsCategoryMenuOpen(false);
     setIsStatusMenuOpen(false);
     setIsMapPickerOpen(false);
+    setFormError(null);
   }
 
   function openMapPicker() {
@@ -193,11 +199,12 @@ export function AdminJourneyCreateSection() {
     const payload = buildCreateJourneyPayload(draft);
 
     if (!payload.success) {
-      Alert.alert("Invalid fields", payload.message);
+      setFormError(payload.message);
       return;
     }
 
     setIsSaving(true);
+    setFormError(null);
 
     try {
       const createdJourney = await createAdminJourney(payload.value);
@@ -261,7 +268,10 @@ export function AdminJourneyCreateSection() {
       clearForm();
 
       if (routeSaveErrorMessage) {
-        Alert.alert("Journey created", routeSaveErrorMessage);
+        showAppToast({
+          text: routeSaveErrorMessage,
+          tone: "warning",
+        });
       }
 
       router.push({
@@ -271,13 +281,13 @@ export function AdminJourneyCreateSection() {
         },
       });
     } catch (error) {
-      Alert.alert(
-        "Create failed",
-        getApiErrorMessage(
+      showAppToast({
+        text: getApiErrorMessage(
           error,
           "Could not create the journey right now.",
         ),
-      );
+        tone: "error",
+      });
     } finally {
       setIsSaving(false);
     }
@@ -338,9 +348,6 @@ export function AdminJourneyCreateSection() {
                 <Text style={styles.metricChipText}>
                   {formatStopCount(routeDraftLocations.length)}
                 </Text>
-              </View>
-              <View style={styles.metricChip}>
-                <Text style={styles.metricChipText}>{draft.notes} notes</Text>
               </View>
             </View>
           </View>
@@ -457,12 +464,12 @@ export function AdminJourneyCreateSection() {
             keyboardType="number-pad"
           />
           <EditableField
-            label="Notes count"
+            label="Note"
             value={draft.notes}
             onChangeText={(value) => updateDraft("notes", value)}
             styles={styles}
             placeholderTextColor={colors.inputPlaceholder}
-            keyboardType="number-pad"
+            multiline
           />
           <EditableField
             label="Latitude"
@@ -506,6 +513,17 @@ export function AdminJourneyCreateSection() {
         </View>
 
         <View style={styles.detailsCard}>
+          <Text style={styles.sectionLabel}>Traits</Text>
+          <JourneyTraitsEditor
+            traits={draft.traits}
+            isDisabled={isSaving}
+            placeholderTextColor={colors.inputPlaceholder}
+            styles={styles}
+            onChangeTraits={(traits) => updateDraft("traits", traits)}
+          />
+        </View>
+
+        <View style={styles.detailsCard}>
           <AdminJourneyLocationEditor
             availableLocations={availableLocations}
             availableLocationsError={availableLocationsError}
@@ -518,6 +536,8 @@ export function AdminJourneyCreateSection() {
             onRequestAvailableLocations={() => void loadAvailableLocations()}
           />
         </View>
+
+        {formError ? <InlineFeedbackCard message={formError} /> : null}
 
         <View style={styles.actionRow}>
           <Pressable
@@ -698,6 +718,135 @@ function EditableSelectField({
           })}
         </View>
       ) : null}
+    </View>
+  );
+}
+
+type JourneyTraitsEditorProps = {
+  traits: string[];
+  isDisabled: boolean;
+  placeholderTextColor: string;
+  styles: AdminJourneyCreateStyles;
+  onChangeTraits: (traits: string[]) => void;
+};
+
+function JourneyTraitsEditor({
+  traits,
+  isDisabled,
+  placeholderTextColor,
+  styles,
+  onChangeTraits,
+}: JourneyTraitsEditorProps) {
+  const [nextTrait, setNextTrait] = useState("");
+  const normalizedNextTrait = normalizeTraitName(nextTrait);
+  const canAddTrait =
+    !isDisabled &&
+    normalizedNextTrait.length > 0 &&
+    !traits.some(
+      (trait) => trait.trim().toLowerCase() === normalizedNextTrait.toLowerCase(),
+    );
+
+  function handleAddTrait() {
+    if (!canAddTrait) {
+      return;
+    }
+
+    onChangeTraits([...traits, normalizedNextTrait]);
+    setNextTrait("");
+  }
+
+  function handleRemoveTrait(indexToRemove: number) {
+    if (isDisabled) {
+      return;
+    }
+
+    onChangeTraits(traits.filter((_, index) => index !== indexToRemove));
+  }
+
+  return (
+    <View style={styles.traitsEditorGroup}>
+      {traits.length > 0 ? (
+        <JourneyTraitBubbles
+          traits={traits}
+          styles={styles}
+          onRemoveTrait={handleRemoveTrait}
+          isDisabled={isDisabled}
+        />
+      ) : (
+        <Text style={styles.emptyStateCopy}>
+          Add traits like scenic, beginner-friendly, or muddy trail.
+        </Text>
+      )}
+
+      <View style={styles.traitInputRow}>
+        <TextInput
+          value={nextTrait}
+          onChangeText={setNextTrait}
+          editable={!isDisabled}
+          style={[styles.textInput, styles.traitInput]}
+          placeholder="Add a trait"
+          placeholderTextColor={placeholderTextColor}
+          returnKeyType="done"
+          onSubmitEditing={handleAddTrait}
+        />
+
+        <Pressable
+          disabled={!canAddTrait}
+          onPress={handleAddTrait}
+          style={({ pressed }) => [
+            styles.traitAddButton,
+            pressed && styles.traitAddButtonPressed,
+            !canAddTrait && styles.traitAddButtonDisabled,
+          ]}
+        >
+          <Text style={styles.traitAddButtonText}>Add</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+type JourneyTraitBubblesProps = {
+  traits: string[];
+  styles: AdminJourneyCreateStyles;
+  onRemoveTrait?: (index: number) => void;
+  isDisabled?: boolean;
+};
+
+function JourneyTraitBubbles({
+  traits,
+  styles,
+  onRemoveTrait,
+  isDisabled = false,
+}: JourneyTraitBubblesProps) {
+  if (traits.length === 0) {
+    return <Text style={styles.emptyStateCopy}>No traits added yet.</Text>;
+  }
+
+  return (
+    <View style={styles.traitsWrap}>
+      {traits.map((trait, index) => (
+        <View key={`${trait}-${index}`} style={styles.traitChip}>
+          <Text style={styles.traitChipText}>{trait}</Text>
+
+          {onRemoveTrait ? (
+            <Pressable
+              accessibilityLabel={`Remove ${trait} trait`}
+              accessibilityRole="button"
+              disabled={isDisabled}
+              hitSlop={6}
+              onPress={() => onRemoveTrait(index)}
+              style={({ pressed }) => [
+                styles.traitRemoveButton,
+                pressed && styles.traitRemoveButtonPressed,
+                isDisabled && styles.traitRemoveButtonDisabled,
+              ]}
+            >
+              <Text style={styles.traitRemoveButtonText}>x</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ))}
     </View>
   );
 }
@@ -916,11 +1065,6 @@ function buildCreateJourneyPayload(
     return experience;
   }
 
-  const notes = parseRequiredInteger(draft.notes, "Notes count");
-  if (!notes.success) {
-    return notes;
-  }
-
   return {
     success: true,
     value: {
@@ -934,7 +1078,8 @@ function buildCreateJourneyPayload(
       distance: distance.value,
       difficulty: difficulty.value,
       polyline: draft.polyline,
-      notes: notes.value,
+      traits: draft.traits.map((trait) => ({ name: trait })),
+      notes: draft.notes,
       status: status.value,
     },
   };
@@ -1062,6 +1207,10 @@ function normalizeJourneyCategoryValue(value: string | null | undefined) {
       (option) => option.label === normalizedValue,
     )?.key ?? normalizedValue
   );
+}
+
+function normalizeTraitName(value: string) {
+  return value.trim();
 }
 
 function parseDraftCoordinates(
@@ -1345,6 +1494,11 @@ function createStyles(colors: AdminJourneyCreateColors) {
       textTransform: "uppercase",
       letterSpacing: 0.4,
     },
+    emptyStateCopy: {
+      color: colors.body,
+      fontSize: 15,
+      lineHeight: 22,
+    },
     textInput: {
       borderRadius: 16,
       borderWidth: 1,
@@ -1360,6 +1514,81 @@ function createStyles(colors: AdminJourneyCreateColors) {
       lineHeight: 22,
       paddingTop: 12,
       paddingBottom: 12,
+    },
+    traitsEditorGroup: {
+      gap: 12,
+    },
+    traitInputRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 10,
+    },
+    traitInput: {
+      flex: 1,
+    },
+    traitsWrap: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 10,
+    },
+    traitChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      borderRadius: 999,
+      backgroundColor: colors.chipBackground,
+      paddingLeft: 12,
+      paddingRight: 8,
+      paddingVertical: 8,
+    },
+    traitChipText: {
+      color: colors.chipText,
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    traitRemoveButton: {
+      width: 22,
+      height: 22,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.inputBorder,
+      backgroundColor: colors.inputBackground,
+    },
+    traitRemoveButtonPressed: {
+      opacity: 0.84,
+    },
+    traitRemoveButtonDisabled: {
+      opacity: 0.52,
+    },
+    traitRemoveButtonText: {
+      color: colors.accent,
+      fontSize: 13,
+      fontWeight: "700",
+      lineHeight: 15,
+      textTransform: "uppercase",
+    },
+    traitAddButton: {
+      minHeight: 48,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 16,
+      backgroundColor: colors.primaryActionBackground,
+      paddingHorizontal: 16,
+    },
+    traitAddButtonPressed: {
+      opacity: 0.88,
+    },
+    traitAddButtonDisabled: {
+      opacity: 0.56,
+    },
+    traitAddButtonText: {
+      color: colors.primaryActionText,
+      fontSize: 14,
+      fontWeight: "700",
+      textTransform: "uppercase",
+      letterSpacing: 0.4,
     },
     selectButton: {
       minHeight: 48,

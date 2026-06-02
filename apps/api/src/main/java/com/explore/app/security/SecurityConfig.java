@@ -3,11 +3,13 @@ package com.explore.app.security;
 import java.util.List;
 
 import com.explore.app.security.jwt.JwtAuthenticationFilter;
+import com.explore.app.security.ratelimit.RateLimitingFilter;
 
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -15,6 +17,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -26,17 +29,21 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
         private final JwtAuthenticationFilter jwtAuthenticationFilter;
+        private final RateLimitingFilter rateLimitingFilter;
+        private final CorsProperties corsProperties;
 
         @Bean
         public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
                 return http
                                 .csrf(AbstractHttpConfigurer::disable)
                                 .cors(Customizer.withDefaults())
+                                .exceptionHandling(exceptions -> exceptions
+                                                .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                                 .sessionManagement(session -> session
                                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                                 .formLogin(form -> form.disable())
                                 .httpBasic(basic -> basic.disable())
-                                .authorizeHttpRequests(auth -> auth
+                                 .authorizeHttpRequests(auth -> auth
                                                 .requestMatchers("/error").permitAll()
 
                                                 .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register")
@@ -45,22 +52,22 @@ public class SecurityConfig {
                                                 .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
 
                                                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                                                .requestMatchers(HttpMethod.PATCH, "/api/manager/users/**").hasRole("ADMIN")
                                                 .requestMatchers("/api/manager/**").hasAnyRole("ADMIN", "MANAGER")
 
-                                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                                                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                                                .anyRequest().authenticated())
-                                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                                .build();
+                                                 .anyRequest().authenticated())
+                                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                                 .addFilterAfter(rateLimitingFilter, JwtAuthenticationFilter.class)
+                                 .build();
         }
 
         @Bean
         public CorsConfigurationSource corsConfigurationSource() {
                 CorsConfiguration config = new CorsConfiguration();
 
-                config.setAllowedOriginPatterns(List.of(
-                                "http://localhost:*",
-                                "http://127.0.0.1:*"));
+                config.setAllowedOriginPatterns(corsProperties.allowedOriginPatterns());
 
                 config.setAllowedMethods(List.of(
                                 "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));

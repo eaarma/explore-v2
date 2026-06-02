@@ -1,5 +1,6 @@
 package com.explore.app.locations.model;
 
+import com.explore.app.user.model.User;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -23,6 +24,16 @@ public class LocationImage {
     @Column(name = "image_url", nullable = false, columnDefinition = "TEXT")
     private String imageUrl;
 
+    @Column(name = "storage_path", columnDefinition = "TEXT")
+    private String storagePath;
+
+    @Column(name = "is_cover", nullable = false)
+    private boolean isCover;
+
     @Column(name = "sort_order", nullable = false)
     private Integer sortOrder;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "uploaded_by")
+    private User uploadedBy;
 }

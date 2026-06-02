@@ -8,13 +8,15 @@ import com.explore.app.journeys.repository.JourneyLocationRepository;
 import com.explore.app.journeys.repository.JourneyRepository;
 import com.explore.app.journeys.dto.JourneyCreateRequest;
 import com.explore.app.journeys.dto.JourneyDetailResponse;
-import com.explore.app.journeys.dto.JourneyProgressResponse;
 import com.explore.app.journeys.dto.JourneyResponse;
 import com.explore.app.journeys.dto.JourneyUpdateRequest;
+import com.explore.app.locations.model.LocationStatus;
 import com.explore.app.shared.CategoryNormalizer;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -23,13 +25,62 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class JourneyService {
 
-    private static final String JOURNEY_PROGRESS_NOT_IMPLEMENTED =
-            "Journey completion is not implemented yet. Persistence tables are in place, but the service logic will be added in a later step.";
-
     private final JourneyRepository journeyRepository;
     private final JourneyLocationRepository journeyLocationRepository;
     private final JourneyMapper journeyMapper;
     private final JourneyLocationMapper journeyLocationMapper;
+
+    public List<JourneyResponse> getPublicJourneys() {
+        return getActiveJourneys();
+    }
+
+    public JourneyResponse getPublicJourneyById(Long id) {
+        return journeyMapper.toResponse(findActiveJourney(id));
+    }
+
+    public List<JourneyResponse> getPublicJourneysByCategory(String category) {
+        return journeyRepository.findByCategoryIgnoreCaseAndStatus(
+                        normalizeCategoryFilter(category),
+                        JourneyStatus.ACTIVE)
+                .stream()
+                .map(journeyMapper::toResponse)
+                .toList();
+    }
+
+    public List<JourneyResponse> getPublicJourneysByCounty(String county) {
+        return journeyRepository.findByCountyIgnoreCaseAndStatus(
+                        normalizeFilter(county, "county"),
+                        JourneyStatus.ACTIVE)
+                .stream()
+                .map(journeyMapper::toResponse)
+                .toList();
+    }
+
+    public List<JourneyResponse> getPublicNearbyJourneys(double latitude, double longitude, double radiusMeters) {
+        validateRadius(radiusMeters);
+
+        return journeyRepository.findByStatus(JourneyStatus.ACTIVE)
+                .stream()
+                .filter(journey -> journey.getLatitude() != null && journey.getLongitude() != null)
+                .filter(journey -> haversineMeters(
+                        latitude,
+                        longitude,
+                        journey.getLatitude(),
+                        journey.getLongitude()) <= radiusMeters)
+                .map(journeyMapper::toResponse)
+                .toList();
+    }
+
+    public JourneyDetailResponse getPublicJourneyWithLocations(Long journeyId) {
+        Journey journey = findActiveJourney(journeyId);
+        return journeyMapper.toDetailResponse(
+                journey,
+                journeyLocationRepository
+                        .findByJourneyIdAndLocationStatusOrderBySortOrderAsc(journeyId, LocationStatus.ACTIVE)
+                        .stream()
+                        .map(journeyLocationMapper::toResponse)
+                        .toList());
+    }
 
     public List<JourneyResponse> getAllJourneys() {
         return journeyRepository.findAll()
@@ -107,18 +158,14 @@ public class JourneyService {
         journey.setStatus(journeyMapper.toStatus(status));
     }
 
-    public List<JourneyResponse> getJourneysWithUserProgress(Long userId) {
-        throw new UnsupportedOperationException(JOURNEY_PROGRESS_NOT_IMPLEMENTED);
-    }
-
-    @Transactional
-    public JourneyProgressResponse completeJourneyIfEligible(Long userId, Long journeyId) {
-        throw new UnsupportedOperationException(JOURNEY_PROGRESS_NOT_IMPLEMENTED);
-    }
-
     private Journey findJourney(Long id) {
         return journeyRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Journey not found"));
+    }
+
+    private Journey findActiveJourney(Long id) {
+        return journeyRepository.findByIdAndStatus(id, JourneyStatus.ACTIVE)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Journey not found"));
     }
 
     private String normalizeFilter(String value, String fieldName) {

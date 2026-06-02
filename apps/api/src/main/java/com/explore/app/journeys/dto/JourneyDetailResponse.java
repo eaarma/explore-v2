@@ -25,7 +25,8 @@ public class JourneyDetailResponse {
     private Double distance;
     private Integer difficulty;
     private String polyline;
-    private Integer notes;
+    private List<JourneyTraitResponse> traits;
+    private String notes;
     private Integer status;
     private Instant createdAt;
     private Instant updatedAt;

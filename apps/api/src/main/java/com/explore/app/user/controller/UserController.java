@@ -2,6 +2,7 @@ package com.explore.app.user.controller;
 
 import com.explore.app.user.service.UserService;
 import com.explore.app.user.dto.CreateUserRequest;
+import com.explore.app.user.dto.UpdateUserRequest;
 import com.explore.app.user.dto.UserResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +33,13 @@ public class UserController {
     @GetMapping("/{id}")
     public UserResponse getUserById(@PathVariable("id") UUID id) {
         return userService.getUserById(id);
+    }
+
+    @PatchMapping("/{id}")
+    public UserResponse updateUser(
+            @PathVariable("id") UUID id,
+            @Valid @RequestBody UpdateUserRequest request) {
+        return userService.updateUser(id, request);
     }
 }
 

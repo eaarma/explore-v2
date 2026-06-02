@@ -1,6 +1,10 @@
 import { Journey } from "@/src/features/journeys/types/journeyTypes";
 import { apiClient } from "@/src/shared/api/apiClient";
 
+export type AdminJourneyTraitRequest = {
+  name: string;
+};
+
 export type CreateAdminJourneyRequest = {
   title: string;
   description?: string;
@@ -12,7 +16,8 @@ export type CreateAdminJourneyRequest = {
   distance?: number;
   difficulty?: number;
   polyline?: string;
-  notes?: number;
+  traits?: AdminJourneyTraitRequest[];
+  notes?: string;
   status?: number;
 };
 
@@ -27,7 +32,8 @@ export type UpdateAdminJourneyRequest = {
   distance?: number;
   difficulty?: number;
   polyline?: string;
-  notes?: number;
+  traits?: AdminJourneyTraitRequest[];
+  notes?: string;
   status?: number;
 };
 

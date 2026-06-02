@@ -52,13 +52,15 @@ async function replaceActiveContent({
             county,
             category,
             imageUrl,
+            imageUrls,
+            traits,
             experience,
             difficulty,
             notes,
             status,
             createdAt,
             updatedAt
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
           location.id,
@@ -69,6 +71,8 @@ async function replaceActiveContent({
           location.county ?? null,
           location.category ?? null,
           location.imageUrl ?? null,
+          serializeImageUrls(location.imageUrls, location.imageUrl),
+          serializeTraits(location.traits),
           location.experience ?? null,
           location.difficulty ?? null,
           location.notes ?? null,
@@ -94,11 +98,12 @@ async function replaceActiveContent({
             distance,
             difficulty,
             polyline,
+            traits,
             notes,
             status,
             createdAt,
             updatedAt
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
           journey.id,
@@ -112,6 +117,7 @@ async function replaceActiveContent({
           journey.distance ?? null,
           journey.difficulty ?? null,
           journey.polyline ?? null,
+          serializeTraits(journey.traits),
           journey.notes ?? null,
           journey.status ?? null,
           journey.createdAt ?? null,
@@ -181,4 +187,56 @@ async function replaceJourneyLocations(journeyLocations: JourneyLocation[]) {
       new Date().toISOString(),
     );
   });
+}
+
+function serializeImageUrls(
+  imageUrls: string[] | undefined,
+  fallbackImageUrl: string | null | undefined,
+) {
+  const normalizedImageUrls = (imageUrls ?? [])
+    .map((imageUrl) => imageUrl?.trim() ?? "")
+    .filter((imageUrl) => imageUrl.length > 0);
+
+  if (normalizedImageUrls.length > 0) {
+    return JSON.stringify(normalizedImageUrls);
+  }
+
+  const normalizedFallbackImageUrl = fallbackImageUrl?.trim() ?? "";
+
+  if (normalizedFallbackImageUrl.length > 0) {
+    return JSON.stringify([normalizedFallbackImageUrl]);
+  }
+
+  return null;
+}
+
+function serializeTraits(traits: Location["traits"]) {
+  if (!traits || traits.length === 0) {
+    return null;
+  }
+
+  const normalizedTraits = traits
+    .map((trait, index) => {
+      const normalizedName = trait?.name?.trim() ?? "";
+
+      if (!normalizedName) {
+        return null;
+      }
+
+      return {
+        id: trait.id,
+        name: normalizedName,
+        sortOrder:
+          typeof trait.sortOrder === "number" && Number.isFinite(trait.sortOrder)
+            ? trait.sortOrder
+            : index,
+      };
+    })
+    .filter((trait): trait is NonNullable<typeof trait> => trait !== null);
+
+  if (normalizedTraits.length === 0) {
+    return null;
+  }
+
+  return JSON.stringify(normalizedTraits);
 }

@@ -1,0 +1,8 @@
+.env
+.env.*
+.gradle/
+.vscode/
+bin/
+build/
+HELP.md
+src/test/

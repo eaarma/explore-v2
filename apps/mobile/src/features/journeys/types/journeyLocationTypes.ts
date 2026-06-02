@@ -11,7 +11,7 @@ export type JourneyLocation = {
   imageUrl: string | null;
   experience: number;
   difficulty: number;
-  notes: number;
+  notes: string | null;
   status: number;
   sortOrder: number;
 };

@@ -21,12 +21,12 @@ public class PublicJourneyController {
 
     @GetMapping
     public List<JourneyResponse> getAllJourneys() {
-        return journeyService.getAllJourneys();
+        return journeyService.getPublicJourneys();
     }
 
     @GetMapping("/{id}")
     public JourneyResponse getJourneyById(@PathVariable("id") Long id) {
-        return journeyService.getJourneyById(id);
+        return journeyService.getPublicJourneyById(id);
     }
 
     @GetMapping("/active")
@@ -36,12 +36,12 @@ public class PublicJourneyController {
 
     @GetMapping("/category/{category}")
     public List<JourneyResponse> getJourneysByCategory(@PathVariable("category") String category) {
-        return journeyService.getJourneysByCategory(category);
+        return journeyService.getPublicJourneysByCategory(category);
     }
 
     @GetMapping("/county/{county}")
     public List<JourneyResponse> getJourneysByCounty(@PathVariable("county") String county) {
-        return journeyService.getJourneysByCounty(county);
+        return journeyService.getPublicJourneysByCounty(county);
     }
 
     @GetMapping("/nearby")
@@ -49,12 +49,12 @@ public class PublicJourneyController {
             @RequestParam("latitude") double latitude,
             @RequestParam("longitude") double longitude,
             @RequestParam("radiusMeters") double radiusMeters) {
-        return journeyService.getNearbyJourneys(latitude, longitude, radiusMeters);
+        return journeyService.getPublicNearbyJourneys(latitude, longitude, radiusMeters);
     }
 
     @GetMapping("/{journeyId}/detail")
     public JourneyDetailResponse getJourneyWithLocations(@PathVariable("journeyId") Long journeyId) {
-        return journeyService.getJourneyWithLocations(journeyId);
+        return journeyService.getPublicJourneyWithLocations(journeyId);
     }
 }
 

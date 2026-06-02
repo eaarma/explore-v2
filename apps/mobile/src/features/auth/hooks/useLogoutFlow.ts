@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Alert } from "react-native";
 import { router } from "expo-router";
 import { useAuthStore } from "@/src/features/auth/store/authStore";
 import { getPendingOfflineProgressSummary } from "@/src/features/discoveries/storage/discoveryCache";
+import { showAppToast } from "@/src/shared/store/appFeedbackStore";
 
 export function useLogoutFlow() {
   const user = useAuthStore((state) => state.user);
@@ -30,10 +30,10 @@ export function useLogoutFlow() {
 
       await completeLogout();
     } catch {
-      Alert.alert(
-        "Could not log out",
-        "Could not verify unsynced discoveries right now. Please try again.",
-      );
+      showAppToast({
+        text: "Could not verify unsynced discoveries right now. Please try again.",
+        tone: "warning",
+      });
     } finally {
       setIsCheckingPendingProgress(false);
     }
@@ -63,10 +63,10 @@ export function useLogoutFlow() {
       await logout();
       router.replace("/(auth)/login");
     } catch {
-      Alert.alert(
-        "Could not log out",
-        "Please try again. Your cached progress has not been changed.",
-      );
+      showAppToast({
+        text: "Please try again. Your cached progress has not been changed.",
+        tone: "error",
+      });
     } finally {
       setIsLoggingOut(false);
     }

@@ -19,7 +19,7 @@ public class PublicJourneyLocationController {
 
     @GetMapping
     public List<JourneyLocationResponse> getLocationsForJourney(@PathVariable("journeyId") Long journeyId) {
-        return journeyLocationService.getLocationsForJourney(journeyId);
+        return journeyLocationService.getPublicLocationsForJourney(journeyId);
     }
 }
 

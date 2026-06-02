@@ -7,6 +7,17 @@ type RoadLabelLayerCandidate = {
   ["source-layer"]?: string;
 };
 
+type StyleSourceCandidate = {
+  type?: unknown;
+  url?: unknown;
+  tiles?: unknown;
+  data?: unknown;
+};
+
+type StyleLayerCandidate = {
+  source?: unknown;
+};
+
 export function isRoadLabelLayerCandidate(
   layer: unknown,
 ): layer is RoadLabelLayerCandidate {
@@ -64,32 +75,32 @@ export function buildAdjustedMapStyle(
     return typeof styleSpecification === "string" ? styleSpecification : "";
   }
 
-  const layers = (styleSpecification as { layers: unknown[] }).layers.map(
-    (layer) => {
-      if (!isRoadLabelLayerCandidate(layer)) {
-        return layer;
-      }
+  const sanitizedStyle = sanitizeMapStyle(styleSpecification);
+  const layers = sanitizedStyle.layers.map((layer) => {
+    if (!isRoadLabelLayerCandidate(layer) || !supportsSymbolSpacing(layer)) {
+      return layer;
+    }
 
-      const currentSpacing =
-        typeof layer.layout?.["symbol-spacing"] === "number"
-          ? layer.layout["symbol-spacing"]
-          : null;
+    const layout = (layer.layout ?? {}) as Record<string, unknown>;
+    const currentSpacing =
+      typeof layout["symbol-spacing"] === "number"
+        ? layout["symbol-spacing"]
+        : null;
 
-      return {
-        ...layer,
-        layout: {
-          ...(layer.layout ?? {}),
-          "symbol-spacing": Math.max(
-            options.roadLabelSpacingMin,
-            (currentSpacing ?? 500) + options.roadLabelSpacingDelta,
-          ),
-        },
-      };
-    },
-  );
+    return {
+      ...layer,
+      layout: {
+        ...layout,
+        "symbol-spacing": Math.max(
+          options.roadLabelSpacingMin,
+          (currentSpacing ?? 500) + options.roadLabelSpacingDelta,
+        ),
+      },
+    };
+  });
 
   return {
-    ...(styleSpecification as StyleSpecification),
+    ...sanitizedStyle,
     layers: layers as StyleSpecification["layers"],
   };
 }
@@ -110,4 +121,58 @@ export function resolveRoadLabelLayerId(styleSpecification: unknown) {
   }
 
   return null;
+}
+
+function sanitizeMapStyle(styleSpecification: unknown): StyleSpecification {
+  const typedStyle = styleSpecification as StyleSpecification & {
+    sources?: Record<string, StyleSourceCandidate>;
+    layers: (StyleSpecification["layers"][number] & StyleLayerCandidate)[];
+  };
+  const sourceEntries = Object.entries(typedStyle.sources ?? {});
+  const validSourceEntries = sourceEntries.filter(([, source]) =>
+    isRenderableSource(source),
+  );
+  const validSourceIds = new Set(validSourceEntries.map(([sourceId]) => sourceId));
+  const filteredLayers = typedStyle.layers.filter((layer) => {
+    if (!layer || typeof layer !== "object") {
+      return false;
+    }
+
+    if (!("source" in layer) || typeof layer.source !== "string") {
+      return true;
+    }
+
+    return validSourceIds.has(layer.source);
+  });
+
+  return {
+    ...typedStyle,
+    sources: Object.fromEntries(validSourceEntries) as StyleSpecification["sources"],
+    layers: filteredLayers as StyleSpecification["layers"],
+  };
+}
+
+function isRenderableSource(source: StyleSourceCandidate) {
+  if (!source || typeof source !== "object") {
+    return false;
+  }
+
+  if (typeof source.url === "string" && source.url.trim().length > 0) {
+    return true;
+  }
+
+  if (Array.isArray(source.tiles) && source.tiles.length > 0) {
+    return true;
+  }
+
+  if ("data" in source) {
+    return source.data !== null && source.data !== undefined;
+  }
+
+  return false;
+}
+
+function supportsSymbolSpacing(layer: RoadLabelLayerCandidate) {
+  const symbolPlacement = layer.layout?.["symbol-placement"];
+  return symbolPlacement === "line" || symbolPlacement === "line-center";
 }

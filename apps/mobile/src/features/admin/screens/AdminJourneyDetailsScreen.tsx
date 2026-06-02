@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Image } from "expo-image";
 import { Redirect, Stack, useLocalSearchParams, useRouter } from "expo-router";
 import {
-  Alert,
   Modal,
   type NativeSyntheticEvent,
   Pressable,
@@ -47,8 +46,7 @@ import {
   normalizeCategory,
 } from "@/src/features/journeys/components/journeysSectionShared";
 import { type JourneyLocation } from "@/src/features/journeys/types/journeyLocationTypes";
-import { type Journey } from "@/src/features/journeys/types/journeyTypes";
-import { normalizeCategory as normalizeLocationCategory } from "@/src/features/locations/components/locationsSectionShared";
+import { type Journey, type JourneyTrait } from "@/src/features/journeys/types/journeyTypes";
 import { getAllLocations } from "@/src/features/locations/api/locationsApi";
 import { type Location } from "@/src/features/locations/types/locationTypes";
 import { useMapStyle } from "@/src/features/map/hooks/useMapStyle";
@@ -56,7 +54,9 @@ import { DEFAULT_MAP_CENTER } from "@/src/features/map/mapConfig";
 import { useAppSettingsStore } from "@/src/features/settings/store/appSettingsStore";
 import { getApiErrorMessage } from "@/src/shared/api/apiError";
 import { CategoryImagePlaceholder } from "@/src/shared/components/CategoryImagePlaceholder";
+import { InlineFeedbackCard } from "@/src/shared/components/InlineFeedbackCard";
 import { useColorScheme } from "@/src/shared/hooks/use-color-scheme";
+import { showAppToast } from "@/src/shared/store/appFeedbackStore";
 import {
   cacheActiveContent,
   cacheJourneyLocations,
@@ -82,6 +82,7 @@ type JourneyEditDraft = {
   difficulty: string;
   polyline: string;
   notes: string;
+  traits: string[];
 };
 
 type CoordinateSelection = {
@@ -143,6 +144,7 @@ export function AdminJourneyDetailsScreen() {
   >(null);
   const [isLoadingJourney, setIsLoadingJourney] = useState(true);
   const [journeyError, setJourneyError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -368,6 +370,7 @@ export function AdminJourneyDetailsScreen() {
           }
         : currentDraft,
     );
+    setFormError(null);
   }
 
   function handleEditPress() {
@@ -382,6 +385,7 @@ export function AdminJourneyDetailsScreen() {
       setIsCategoryMenuOpen(false);
       setIsStatusMenuOpen(false);
       setIsMapPickerOpen(false);
+      setFormError(null);
       return;
     }
 
@@ -392,6 +396,7 @@ export function AdminJourneyDetailsScreen() {
       setIsCategoryMenuOpen(false);
       setIsStatusMenuOpen(false);
       setIsMapPickerOpen(false);
+      setFormError(null);
     }
   }
 
@@ -445,11 +450,12 @@ export function AdminJourneyDetailsScreen() {
     );
 
     if (!payload.success) {
-      Alert.alert("Invalid fields", payload.message);
+      setFormError(payload.message);
       return;
     }
 
     setIsSaving(true);
+    setFormError(null);
 
     try {
       const savedJourney = await updateAdminJourney(journey.id, payload.value);
@@ -464,13 +470,13 @@ export function AdminJourneyDetailsScreen() {
           })),
         );
       } catch (error) {
-        Alert.alert(
-          "Route locations not saved",
-          getApiErrorMessage(
+        showAppToast({
+          text: getApiErrorMessage(
             error,
             "Journey details were saved, but route location changes could not be saved.",
           ),
-        );
+          tone: "warning",
+        });
         return;
       }
 
@@ -515,15 +521,18 @@ export function AdminJourneyDetailsScreen() {
         // Keep the saved server state even if local cache refresh fails.
       }
 
-      Alert.alert("Journey saved", "The journey changes were saved.");
+      showAppToast({
+        text: "The journey changes were saved.",
+        tone: "success",
+      });
     } catch (error) {
-      Alert.alert(
-        "Save failed",
-        getApiErrorMessage(
+      showAppToast({
+        text: getApiErrorMessage(
           error,
           "Could not save the journey changes right now.",
         ),
-      );
+        tone: "error",
+      });
     } finally {
       setIsSaving(false);
     }
@@ -633,11 +642,6 @@ export function AdminJourneyDetailsScreen() {
                   <View style={styles.metricChip}>
                     <Text style={styles.metricChipText}>
                       Experience {editableValues.experience || "Unknown"}
-                    </Text>
-                  </View>
-                  <View style={styles.metricChip}>
-                    <Text style={styles.metricChipText}>
-                      {editableValues.notes || "0"} notes
                     </Text>
                   </View>
                 </View>
@@ -763,12 +767,12 @@ export function AdminJourneyDetailsScreen() {
                     keyboardType="number-pad"
                   />
                   <EditableField
-                    label="Notes count"
+                    label="Note"
                     value={editableValues.notes}
                     onChangeText={(value) => updateDraft("notes", value)}
                     styles={styles}
                     placeholderTextColor={colors.inputPlaceholder}
-                    keyboardType="number-pad"
+                    multiline
                   />
                   <EditableField
                     label="Latitude"
@@ -861,9 +865,10 @@ export function AdminJourneyDetailsScreen() {
                     styles={styles}
                   />
                   <MetadataRow
-                    label="Notes count"
-                    value={String(journey.notes)}
+                    label="Note"
+                    value={getMultilineValue(journey.notes, "No note added.")}
                     styles={styles}
+                    multiline
                   />
                   <MetadataRow
                     label="Latitude"
@@ -889,6 +894,25 @@ export function AdminJourneyDetailsScreen() {
             </View>
 
             <View style={styles.detailsCard}>
+              <Text style={styles.sectionLabel}>Traits</Text>
+
+              {isEditing ? (
+                <JourneyTraitsEditor
+                  traits={editableValues.traits}
+                  isDisabled={isSaving}
+                  placeholderTextColor={colors.inputPlaceholder}
+                  styles={styles}
+                  onChangeTraits={(traits) => updateDraft("traits", traits)}
+                />
+              ) : (
+                <JourneyTraitBubbles
+                  traits={editableValues.traits}
+                  styles={styles}
+                />
+              )}
+            </View>
+
+            <View style={styles.detailsCard}>
               <AdminJourneyLocationEditor
                 availableLocations={availableLocations}
                 availableLocationsError={availableLocationsError}
@@ -903,6 +927,8 @@ export function AdminJourneyDetailsScreen() {
                 }
               />
             </View>
+
+            {formError ? <InlineFeedbackCard message={formError} /> : null}
 
             <View style={styles.actionRow}>
               {isEditing ? (
@@ -1146,6 +1172,140 @@ function EditableSelectField({
   );
 }
 
+type JourneyTraitsEditorProps = {
+  traits: string[];
+  isDisabled: boolean;
+  placeholderTextColor: string;
+  styles: AdminJourneyDetailsStyles;
+  onChangeTraits: (traits: string[]) => void;
+};
+
+function JourneyTraitsEditor({
+  traits,
+  isDisabled,
+  placeholderTextColor,
+  styles,
+  onChangeTraits,
+}: JourneyTraitsEditorProps) {
+  const [nextTrait, setNextTrait] = useState("");
+  const normalizedNextTrait = normalizeTraitName(nextTrait);
+  const canAddTrait =
+    !isDisabled &&
+    normalizedNextTrait.length > 0 &&
+    !traits.some(
+      (trait) => trait.trim().toLowerCase() === normalizedNextTrait.toLowerCase(),
+    );
+
+  function handleAddTrait() {
+    if (!canAddTrait) {
+      return;
+    }
+
+    onChangeTraits([...traits, normalizedNextTrait]);
+    setNextTrait("");
+  }
+
+  function handleRemoveTrait(indexToRemove: number) {
+    if (isDisabled) {
+      return;
+    }
+
+    onChangeTraits(traits.filter((_, index) => index !== indexToRemove));
+  }
+
+  return (
+    <View style={styles.traitsEditorGroup}>
+      {traits.length > 0 ? (
+        <JourneyTraitBubbles
+          traits={traits}
+          styles={styles}
+          onRemoveTrait={handleRemoveTrait}
+          isEditable
+          isDisabled={isDisabled}
+        />
+      ) : (
+        <Text style={styles.emptyStateCopy}>
+          Add traits like scenic, beginner-friendly, or muddy trail.
+        </Text>
+      )}
+
+      <View style={styles.traitInputRow}>
+        <TextInput
+          value={nextTrait}
+          onChangeText={setNextTrait}
+          editable={!isDisabled}
+          style={[styles.textInput, styles.traitInput]}
+          placeholder="Add a trait"
+          placeholderTextColor={placeholderTextColor}
+          returnKeyType="done"
+          onSubmitEditing={handleAddTrait}
+        />
+
+        <Pressable
+          disabled={!canAddTrait}
+          onPress={handleAddTrait}
+          style={({ pressed }) => [
+            styles.traitAddButton,
+            pressed && styles.traitAddButtonPressed,
+            !canAddTrait && styles.traitAddButtonDisabled,
+          ]}
+        >
+          <Text style={styles.traitAddButtonText}>Add</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+type JourneyTraitBubblesProps = {
+  traits: string[] | JourneyTrait[] | undefined;
+  styles: AdminJourneyDetailsStyles;
+  onRemoveTrait?: (index: number) => void;
+  isEditable?: boolean;
+  isDisabled?: boolean;
+};
+
+function JourneyTraitBubbles({
+  traits,
+  styles,
+  onRemoveTrait,
+  isEditable = false,
+  isDisabled = false,
+}: JourneyTraitBubblesProps) {
+  const normalizedTraits = normalizeTraitList(traits);
+
+  if (normalizedTraits.length === 0) {
+    return <Text style={styles.emptyStateCopy}>No traits added yet.</Text>;
+  }
+
+  return (
+    <View style={styles.traitsWrap}>
+      {normalizedTraits.map((trait, index) => (
+        <View key={`${trait}-${index}`} style={styles.traitChip}>
+          <Text style={styles.traitChipText}>{trait}</Text>
+
+          {isEditable && onRemoveTrait ? (
+            <Pressable
+              accessibilityLabel={`Remove ${trait} trait`}
+              accessibilityRole="button"
+              disabled={isDisabled}
+              hitSlop={6}
+              onPress={() => onRemoveTrait(index)}
+              style={({ pressed }) => [
+                styles.traitRemoveButton,
+                pressed && styles.traitRemoveButtonPressed,
+                isDisabled && styles.traitRemoveButtonDisabled,
+              ]}
+            >
+              <Text style={styles.traitRemoveButtonText}>x</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ))}
+    </View>
+  );
+}
+
 type CoordinatePickerModalProps = {
   visible: boolean;
   initialCoordinates: CoordinateSelection | null;
@@ -1339,7 +1499,8 @@ function createJourneyEditDraft(journey: Journey): JourneyEditDraft {
     distance: String(journey.distance),
     difficulty: String(journey.difficulty),
     polyline: journey.polyline ?? "",
-    notes: String(journey.notes),
+    notes: normalizeOptionalText(journey.notes),
+    traits: normalizeTraitList(journey.traits),
   };
 }
 
@@ -1383,11 +1544,6 @@ function buildJourneyUpdatePayload(
     return experience;
   }
 
-  const notes = parseRequiredInteger(draft.notes, "Notes count");
-  if (!notes.success) {
-    return notes;
-  }
-
   return {
     success: true,
     value: {
@@ -1401,7 +1557,8 @@ function buildJourneyUpdatePayload(
       distance: distance.value,
       difficulty: difficulty.value,
       polyline: draft.polyline,
-      notes: notes.value,
+      traits: draft.traits.map((trait) => ({ name: trait })),
+      notes: draft.notes,
       status: status.value,
     },
   };
@@ -1601,16 +1758,6 @@ function getJourneyDescription(description: string | null | undefined) {
   return trimmedDescription;
 }
 
-function getStopTitle(title: string | null | undefined) {
-  const trimmedTitle = typeof title === "string" ? title.trim() : "";
-
-  if (!trimmedTitle) {
-    return "Untitled stop";
-  }
-
-  return trimmedTitle;
-}
-
 function getPublicationStatusLabel(status: number | null | undefined) {
   if (status === 1) {
     return "Active";
@@ -1738,10 +1885,10 @@ function getRawValue(value: string | null | undefined) {
 }
 
 function getMultilineValue(
-  value: string | null | undefined,
+  value: unknown,
   emptyValueText: string,
 ) {
-  const trimmedValue = typeof value === "string" ? value.trim() : "";
+  const trimmedValue = normalizeOptionalText(value).trim();
 
   if (!trimmedValue) {
     return emptyValueText;
@@ -1750,46 +1897,49 @@ function getMultilineValue(
   return trimmedValue;
 }
 
-function formatBoolean(value: boolean | null | undefined) {
-  if (value === true) {
-    return "Yes";
-  }
-
-  if (value === false) {
-    return "No";
-  }
-
-  return "Unknown";
-}
-
-function formatOptionalDateTime(value: string | null | undefined) {
-  if (!value) {
-    return "Not available";
-  }
-
-  return formatDateTime(value);
-}
-
-function formatDateTime(value: string | null | undefined) {
-  if (!value) {
-    return "Not available";
-  }
-
-  const parsedValue = Date.parse(value);
-
-  if (!Number.isFinite(parsedValue)) {
+function normalizeOptionalText(value: unknown) {
+  if (typeof value === "string") {
     return value;
   }
 
-  return new Date(parsedValue).toLocaleString();
-}
-
-function formatStopOrder(sortOrder: number | null | undefined, index: number) {
-  if (!Number.isFinite(sortOrder)) {
-    return String(index + 1);
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
   }
 
-  return String(Math.round(Number(sortOrder)));
+  return "";
+}
+
+function normalizeTraitName(value: unknown) {
+  return normalizeOptionalText(value).trim();
+}
+
+function normalizeTraitList(traits: string[] | JourneyTrait[] | undefined) {
+  if (!traits || traits.length === 0) {
+    return [];
+  }
+
+  const normalizedTraits: string[] = [];
+  const seenTraits = new Set<string>();
+
+  for (const trait of traits) {
+    const rawName = typeof trait === "string" ? trait : trait?.name;
+    const normalizedName = normalizeTraitName(rawName);
+
+    if (!normalizedName) {
+      continue;
+    }
+
+    const dedupeKey = normalizedName.toLowerCase();
+
+    if (seenTraits.has(dedupeKey)) {
+      continue;
+    }
+
+    seenTraits.add(dedupeKey);
+    normalizedTraits.push(normalizedName);
+  }
+
+  return normalizedTraits;
 }
 
 type AdminJourneyDetailsColors = ReturnType<
@@ -2036,6 +2186,11 @@ function createStyles(colors: AdminJourneyDetailsColors) {
     metadataValueMultiline: {
       flexShrink: 1,
     },
+    emptyStateCopy: {
+      color: colors.subtle,
+      fontSize: 15,
+      lineHeight: 22,
+    },
     textInput: {
       borderRadius: 16,
       borderWidth: 1,
@@ -2051,6 +2206,81 @@ function createStyles(colors: AdminJourneyDetailsColors) {
       lineHeight: 22,
       paddingTop: 12,
       paddingBottom: 12,
+    },
+    traitsEditorGroup: {
+      gap: 12,
+    },
+    traitInputRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 10,
+    },
+    traitInput: {
+      flex: 1,
+    },
+    traitsWrap: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 10,
+    },
+    traitChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      borderRadius: 999,
+      backgroundColor: colors.chipBackground,
+      paddingLeft: 12,
+      paddingRight: 8,
+      paddingVertical: 8,
+    },
+    traitChipText: {
+      color: colors.chipText,
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    traitRemoveButton: {
+      width: 22,
+      height: 22,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.inputBorder,
+      backgroundColor: colors.inputBackground,
+    },
+    traitRemoveButtonPressed: {
+      opacity: 0.84,
+    },
+    traitRemoveButtonDisabled: {
+      opacity: 0.52,
+    },
+    traitRemoveButtonText: {
+      color: colors.accent,
+      fontSize: 13,
+      fontWeight: "700",
+      lineHeight: 15,
+      textTransform: "uppercase",
+    },
+    traitAddButton: {
+      minHeight: 48,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 16,
+      backgroundColor: colors.primaryActionBackground,
+      paddingHorizontal: 16,
+    },
+    traitAddButtonPressed: {
+      opacity: 0.88,
+    },
+    traitAddButtonDisabled: {
+      opacity: 0.56,
+    },
+    traitAddButtonText: {
+      color: colors.primaryActionText,
+      fontSize: 14,
+      fontWeight: "700",
+      textTransform: "uppercase",
+      letterSpacing: 0.4,
     },
     selectButton: {
       minHeight: 48,

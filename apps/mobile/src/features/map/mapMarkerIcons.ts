@@ -69,7 +69,9 @@ export function getMapMarkerState(
   achieved: boolean,
   active: boolean,
 ): MapMarkerState {
-  void active;
+  if (active) {
+    return "active";
+  }
 
   if (achieved) {
     return "achieved";

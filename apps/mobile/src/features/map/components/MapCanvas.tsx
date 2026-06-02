@@ -123,15 +123,19 @@ export function MapCanvas({
   const locationSourceId = `location-points-${contentRevision}`;
   const locationLayerId = `location-markers-${contentRevision}`;
   const locationActiveGlowLayerId = `location-active-glow-${contentRevision}`;
-  const locationActiveHighlightLayerId = `location-active-highlight-${contentRevision}`;
+  const locationActiveHighlightLayerId =
+    `location-active-highlight-${contentRevision}`;
   const locationTripGlowLayerId = `location-trip-glow-${contentRevision}`;
-  const locationTripHighlightLayerId = `location-trip-highlight-${contentRevision}`;
+  const locationTripHighlightLayerId =
+    `location-trip-highlight-${contentRevision}`;
   const journeySourceId = `journey-points-${contentRevision}`;
   const journeyLayerId = `journey-markers-${contentRevision}`;
   const journeyActiveGlowLayerId = `journey-active-glow-${contentRevision}`;
-  const journeyActiveHighlightLayerId = `journey-active-highlight-${contentRevision}`;
+  const journeyActiveHighlightLayerId =
+    `journey-active-highlight-${contentRevision}`;
   const journeyTripGlowLayerId = `journey-trip-glow-${contentRevision}`;
-  const journeyTripHighlightLayerId = `journey-trip-highlight-${contentRevision}`;
+  const journeyTripHighlightLayerId =
+    `journey-trip-highlight-${contentRevision}`;
   const hillshadeOverlayLayerPaint = overlayVisibility.hillshade
     ? hillshadeOverlayPaint
     : hiddenRasterOverlayPaint;
@@ -392,7 +396,11 @@ export function MapCanvas({
           filter={activeHighlightedFilter}
           paint={locationActiveHighlightPaint}
         />
-        <Layer id={locationLayerId} type="symbol" layout={locationMarkerLayout} />
+        <Layer
+          id={locationLayerId}
+          type="symbol"
+          layout={locationMarkerLayout}
+        />
       </GeoJSONSource>
 
       <GeoJSONSource
@@ -405,35 +413,30 @@ export function MapCanvas({
         <Layer
           id={journeyTripGlowLayerId}
           type="circle"
-          afterId={locationLayerId}
           filter={tripHighlightedFilter}
           paint={journeyTripGlowPaint}
         />
         <Layer
           id={journeyTripHighlightLayerId}
           type="circle"
-          afterId={journeyTripGlowLayerId}
           filter={tripHighlightedFilter}
           paint={journeyTripHighlightPaint}
         />
         <Layer
           id={journeyActiveGlowLayerId}
           type="circle"
-          afterId={journeyTripHighlightLayerId}
           filter={activeHighlightedFilter}
           paint={journeyActiveGlowPaint}
         />
         <Layer
           id={journeyActiveHighlightLayerId}
           type="circle"
-          afterId={journeyActiveGlowLayerId}
           filter={activeHighlightedFilter}
           paint={journeyActiveHighlightPaint}
         />
         <Layer
           id={journeyLayerId}
           type="symbol"
-          afterId={journeyActiveHighlightLayerId}
           layout={journeyMarkerLayout}
         />
       </GeoJSONSource>

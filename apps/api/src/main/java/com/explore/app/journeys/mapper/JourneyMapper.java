@@ -1,22 +1,29 @@
 package com.explore.app.journeys.mapper;
 
 import com.explore.app.journeys.model.Journey;
+import com.explore.app.journeys.model.JourneyTrait;
 import com.explore.app.journeys.model.JourneyStatus;
 import com.explore.app.journeys.dto.JourneyCreateRequest;
 import com.explore.app.journeys.dto.JourneyDetailResponse;
 import com.explore.app.journeys.dto.JourneyLocationResponse;
 import com.explore.app.journeys.dto.JourneyResponse;
+import com.explore.app.journeys.dto.JourneyTraitRequest;
+import com.explore.app.journeys.dto.JourneyTraitResponse;
 import com.explore.app.journeys.dto.JourneyUpdateRequest;
 import com.explore.app.shared.CategoryNormalizer;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 @Component
 public class JourneyMapper {
 
     public Journey toEntity(JourneyCreateRequest request) {
-        return Journey.builder()
+        Journey journey = Journey.builder()
                 .title(normalizeRequired(request.getTitle(), "title"))
                 .description(normalizeOptional(request.getDescription()))
                 .latitude(request.getLatitude())
@@ -27,9 +34,13 @@ public class JourneyMapper {
                 .distance(request.getDistance())
                 .difficulty(request.getDifficulty())
                 .polyline(normalizeOptional(request.getPolyline()))
-                .notes(request.getNotes())
+                .notes(normalizeOptional(request.getNotes()))
                 .status(toStatus(request.getStatus()))
                 .build();
+
+        replaceTraits(journey, normalizeTraitNames(request.getTraits()));
+
+        return journey;
     }
 
     public void updateEntity(Journey journey, JourneyUpdateRequest request) {
@@ -73,8 +84,12 @@ public class JourneyMapper {
             journey.setPolyline(normalizeOptional(request.getPolyline()));
         }
 
+        if (request.getTraits() != null) {
+            replaceTraits(journey, normalizeTraitNames(request.getTraits()));
+        }
+
         if (request.getNotes() != null) {
-            journey.setNotes(request.getNotes());
+            journey.setNotes(normalizeOptional(request.getNotes()));
         }
 
         if (request.getStatus() != null) {
@@ -95,6 +110,7 @@ public class JourneyMapper {
                 .distance(journey.getDistance())
                 .difficulty(journey.getDifficulty())
                 .polyline(journey.getPolyline())
+                .traits(resolveTraits(journey))
                 .notes(journey.getNotes())
                 .status(journey.getStatus().getCode())
                 .createdAt(journey.getCreatedAt())
@@ -115,6 +131,7 @@ public class JourneyMapper {
                 .distance(journey.getDistance())
                 .difficulty(journey.getDifficulty())
                 .polyline(journey.getPolyline())
+                .traits(resolveTraits(journey))
                 .notes(journey.getNotes())
                 .status(journey.getStatus().getCode())
                 .createdAt(journey.getCreatedAt())
@@ -125,6 +142,67 @@ public class JourneyMapper {
 
     public JourneyStatus toStatus(Integer status) {
         return JourneyStatus.fromCode(status);
+    }
+
+    private List<JourneyTraitResponse> resolveTraits(Journey journey) {
+        if (journey == null || journey.getTraits() == null) {
+            return List.of();
+        }
+
+        return journey.getTraits().stream()
+                .map(journeyTrait -> JourneyTraitResponse.builder()
+                        .id(journeyTrait.getId())
+                        .name(journeyTrait.getName())
+                        .sortOrder(journeyTrait.getSortOrder())
+                        .build())
+                .toList();
+    }
+
+    private void replaceTraits(Journey journey, List<String> traitNames) {
+        journey.getTraits().clear();
+
+        if (traitNames == null || traitNames.isEmpty()) {
+            return;
+        }
+
+        for (int index = 0; index < traitNames.size(); index++) {
+            journey.getTraits().add(JourneyTrait.builder()
+                    .journey(journey)
+                    .name(traitNames.get(index))
+                    .sortOrder(index)
+                    .build());
+        }
+    }
+
+    private List<String> normalizeTraitNames(List<JourneyTraitRequest> requestTraits) {
+        if (requestTraits == null) {
+            return List.of();
+        }
+
+        List<String> normalizedTraitNames = new ArrayList<>();
+        Set<String> seenTraitNames = new LinkedHashSet<>();
+
+        for (JourneyTraitRequest requestTrait : requestTraits) {
+            if (requestTrait == null) {
+                continue;
+            }
+
+            String normalizedName = normalizeOptional(requestTrait.getName());
+
+            if (normalizedName == null) {
+                continue;
+            }
+
+            String dedupeKey = normalizedName.toLowerCase(Locale.ROOT);
+
+            if (!seenTraitNames.add(dedupeKey)) {
+                continue;
+            }
+
+            normalizedTraitNames.add(normalizedName);
+        }
+
+        return normalizedTraitNames;
     }
 
     private String normalizeRequired(String value, String fieldName) {

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert } from "react-native";
 
 import { useAuthStore } from "@/src/features/auth/store/authStore";
 import {
@@ -24,6 +23,7 @@ import {
   getOfflineMapStorageLabel,
 } from "@/src/features/settings/utils/settingsPresentation";
 import { useColorScheme } from "@/src/shared/hooks/use-color-scheme";
+import { showAppDialog } from "@/src/shared/store/appFeedbackStore";
 
 export function useSettingsScreenState() {
   const status = useAuthStore((state) => state.status);
@@ -171,23 +171,21 @@ export function useSettingsScreenState() {
   }, [refreshOfflineMapStatus, setOfflineRoadMapEnabled]);
 
   const confirmDeleteOfflineMap = useCallback(() => {
-    Alert.alert(
-      "Delete offline map?",
-      "This removes the Estonia road pack from this device until you download it again.",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
+    showAppDialog({
+      title: "Delete offline map?",
+      message:
+        "This removes the Estonia road pack from this device until you download it again.",
+      secondaryAction: {
+        label: "Cancel",
+      },
+      primaryAction: {
+        label: "Delete",
+        onPress: () => {
+          void handleDeleteOfflineMap();
         },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => {
-            void handleDeleteOfflineMap();
-          },
-        },
-      ],
-    );
+        variant: "destructive",
+      },
+    });
   }, [handleDeleteOfflineMap]);
 
   return {

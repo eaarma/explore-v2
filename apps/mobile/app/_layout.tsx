@@ -2,8 +2,11 @@ import { useEffect } from "react";
 import { ThemeProvider, DarkTheme, DefaultTheme } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 import { Stack } from "expo-router";
+import { LogManager } from "@maplibre/maplibre-react-native";
 
 import { useAppSettingsStore } from "@/src/features/settings/store/appSettingsStore";
+import { AppDialogHost } from "@/src/shared/components/AppDialogHost";
+import { AppToastHost } from "@/src/shared/components/AppToastHost";
 import { useColorScheme } from "@/src/shared/hooks/use-color-scheme";
 
 const navigationThemes = {
@@ -40,6 +43,16 @@ export default function RootLayout() {
   useEffect(() => {
     void hydrateSettings();
   }, [hydrateSettings]);
+
+  useEffect(() => {
+    LogManager.onLog((event) => {
+      if (isBenignMapLibreParseStyleWarning(event.message)) {
+        return true;
+      }
+
+      return false;
+    });
+  }, []);
 
   const navigationTheme =
     colorScheme === "dark" ? navigationThemes.dark : navigationThemes.light;
@@ -110,6 +123,13 @@ export default function RootLayout() {
           }}
         />
         <Stack.Screen
+          name="admin-customize"
+          options={{
+            headerShown: true,
+            title: "Customize",
+          }}
+        />
+        <Stack.Screen
           name="privacy-policy"
           options={{
             headerShown: true,
@@ -131,6 +151,15 @@ export default function RootLayout() {
           }}
         />
       </Stack>
+      <AppToastHost />
+      <AppDialogHost />
     </ThemeProvider>
+  );
+}
+
+function isBenignMapLibreParseStyleWarning(message: string) {
+  return (
+    message.includes("[ParseStyle]: source must have tiles") ||
+    message.includes("[ParseStyle]: layer doesn't support this property")
   );
 }

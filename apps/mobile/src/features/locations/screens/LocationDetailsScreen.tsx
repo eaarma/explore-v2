@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useMemo, useState } from "react";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Image } from "expo-image";
@@ -13,7 +14,15 @@ import {
   getLocationById,
 } from "@/src/features/locations/api/locationsApi";
 import { normalizeCategory } from "@/src/features/locations/components/locationsSectionShared";
-import { Location } from "@/src/features/locations/types/locationTypes";
+import {
+  Location,
+  type LocationTrait,
+} from "@/src/features/locations/types/locationTypes";
+import { CategoryImagePlaceholder } from "@/src/shared/components/CategoryImagePlaceholder";
+import {
+  ContentNoteDialog,
+  hasContentNote,
+} from "@/src/shared/components/ContentNoteDialog";
 import { useColorScheme } from "@/src/shared/hooks/use-color-scheme";
 import {
   getCachedLocationById,
@@ -23,10 +32,11 @@ import { useContentSyncStore } from "@/src/shared/store/contentSyncStore";
 
 export function LocationDetailsScreen() {
   const colorScheme = useColorScheme();
-  const styles = useMemo(
-    () => createStyles(getLocationDetailsColors(colorScheme === "dark")),
+  const colors = useMemo(
+    () => getLocationDetailsColors(colorScheme === "dark"),
     [colorScheme],
   );
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const progressRevision = useDiscoveryProgressStore((state) => state.revision);
@@ -38,6 +48,10 @@ export function LocationDetailsScreen() {
   const [location, setLocation] = useState<Location | null>(null);
   const [isLoadingLocation, setIsLoadingLocation] = useState(true);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [isNoteDialogVisible, setIsNoteDialogVisible] = useState(false);
+  const [autoOpenedNoteLocationId, setAutoOpenedNoteLocationId] = useState<
+    number | null
+  >(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -93,14 +107,14 @@ export function LocationDetailsScreen() {
           }
         }
 
-        if (!nextLocation) {
-          try {
-            nextLocation = await getLocationById(resolvedLocationId);
-            nextLocation = await hydrateLocationWithProgress(
-              user?.id,
-              nextLocation,
-            );
-          } catch {
+        try {
+          nextLocation = await getLocationById(resolvedLocationId);
+          nextLocation = await hydrateLocationWithProgress(
+            user?.id,
+            nextLocation,
+          );
+        } catch {
+          if (!nextLocation) {
             const activeLocations = await getActiveLocations();
             nextLocation =
               activeLocations.find(
@@ -146,6 +160,21 @@ export function LocationDetailsScreen() {
 
   const screenTitle = location?.title ?? "Location";
   const categoryLabel = location ? normalizeCategory(location.category) : "";
+  const locationTraits = normalizeLocationTraits(location?.traits);
+  const shouldShowNoteButton = hasContentNote(location?.notes);
+
+  useEffect(() => {
+    if (!location || !hasContentNote(location.notes)) {
+      return;
+    }
+
+    if (autoOpenedNoteLocationId === location.id) {
+      return;
+    }
+
+    setIsNoteDialogVisible(true);
+    setAutoOpenedNoteLocationId(location.id);
+  }, [autoOpenedNoteLocationId, location]);
 
   return (
     <>
@@ -180,8 +209,8 @@ export function LocationDetailsScreen() {
         {!isLoadingLocation && !locationError && location ? (
           <>
             <View style={styles.heroCard}>
-              <LocationHeroImage
-                imageUrl={location.imageUrl}
+              <LocationImageGallery
+                imageUrls={resolveLocationImageUrls(location)}
                 categoryLabel={categoryLabel}
                 styles={styles}
               />
@@ -194,6 +223,24 @@ export function LocationDetailsScreen() {
                 <Text style={styles.locationStatus}>
                   {getLocationVisitStatusLabel(location)}
                 </Text>
+
+                {shouldShowNoteButton ? (
+                  <Pressable
+                    accessibilityLabel="Show location note"
+                    accessibilityRole="button"
+                    onPress={() => setIsNoteDialogVisible(true)}
+                    style={({ pressed }) => [
+                      styles.heroInfoButton,
+                      pressed && styles.heroInfoButtonPressed,
+                    ]}
+                  >
+                    <Ionicons
+                      color={colors.accent}
+                      name="information"
+                      size={20}
+                    />
+                  </Pressable>
+                ) : null}
               </View>
             </View>
 
@@ -203,7 +250,7 @@ export function LocationDetailsScreen() {
             </View>
 
             <View style={styles.detailsCard}>
-              <Text style={styles.sectionLabel}>At a glance</Text>
+              <Text style={styles.sectionLabel}>Traits</Text>
 
               <View style={styles.metricRow}>
                 <View style={styles.metricChip}>
@@ -212,19 +259,11 @@ export function LocationDetailsScreen() {
                   </Text>
                 </View>
 
-                <View style={styles.metricChip}>
-                  <Text style={styles.metricChipText}>{location.county}</Text>
-                </View>
-
-                <View style={styles.metricChip}>
-                  <Text style={styles.metricChipText}>{categoryLabel}</Text>
-                </View>
-
-                <View style={styles.metricChip}>
-                  <Text style={styles.metricChipText}>
-                    {location.notes} notes
-                  </Text>
-                </View>
+                {locationTraits.map((trait) => (
+                  <View key={trait.id} style={styles.metricChip}>
+                    <Text style={styles.metricChipText}>{trait.name}</Text>
+                  </View>
+                ))}
               </View>
             </View>
 
@@ -271,36 +310,107 @@ export function LocationDetailsScreen() {
           </>
         ) : null}
       </ScrollView>
+
+      <ContentNoteDialog
+        visible={isNoteDialogVisible}
+        title={`${screenTitle} note`}
+        note={location?.notes}
+        onClose={() => setIsNoteDialogVisible(false)}
+      />
     </>
   );
 }
 
 type LocationHeroImageProps = {
-  imageUrl: string | null;
+  imageUrls: string[];
   categoryLabel: string;
   styles: LocationDetailsStyles;
 };
 
-function LocationHeroImage({
-  imageUrl,
+function LocationImageGallery({
+  imageUrls,
   categoryLabel,
   styles,
 }: LocationHeroImageProps) {
-  if (!imageUrl) {
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const hasMultipleImages = imageUrls.length > 1;
+  const selectedImageUrl = imageUrls[selectedImageIndex] ?? null;
+
+  useEffect(() => {
+    if (selectedImageIndex < imageUrls.length) {
+      return;
+    }
+
+    setSelectedImageIndex(0);
+  }, [imageUrls, selectedImageIndex]);
+
+  if (!selectedImageUrl) {
     return (
-      <View style={[styles.heroImage, styles.heroImagePlaceholder]}>
-        <Text style={styles.heroImagePlaceholderText}>{categoryLabel}</Text>
-      </View>
+      <CategoryImagePlaceholder
+        categoryLabel={categoryLabel}
+        size="large"
+        style={styles.heroImage}
+      />
     );
   }
 
   return (
-    <Image
-      source={{ uri: imageUrl }}
-      style={styles.heroImage}
-      contentFit="cover"
-    />
+    <View style={hasMultipleImages ? styles.gallery : undefined}>
+      <Image
+        source={{ uri: selectedImageUrl }}
+        style={styles.heroImage}
+        contentFit="cover"
+      />
+
+      {hasMultipleImages ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.galleryThumbnailRow}
+        >
+          {imageUrls.map((imageUrl, index) => {
+            const isSelected = index === selectedImageIndex;
+
+            return (
+              <Pressable
+                key={`${imageUrl}-${index}`}
+                onPress={() => setSelectedImageIndex(index)}
+                style={({ pressed }) => [
+                  styles.galleryThumbnailButton,
+                  isSelected && styles.galleryThumbnailButtonSelected,
+                  pressed && styles.galleryThumbnailButtonPressed,
+                ]}
+              >
+                <Image
+                  source={{ uri: imageUrl }}
+                  style={styles.galleryThumbnailImage}
+                  contentFit="cover"
+                />
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      ) : null}
+    </View>
   );
+}
+
+function resolveLocationImageUrls(location: Location) {
+  const normalizedImageUrls = (location.imageUrls ?? [])
+    .map((imageUrl) => imageUrl?.trim() ?? "")
+    .filter((imageUrl) => imageUrl.length > 0);
+
+  if (normalizedImageUrls.length > 0) {
+    return normalizedImageUrls;
+  }
+
+  const fallbackImageUrl = location.imageUrl?.trim() ?? "";
+
+  if (fallbackImageUrl.length > 0) {
+    return [fallbackImageUrl];
+  }
+
+  return [];
 }
 
 function parseLocationId(value: string | string[] | undefined) {
@@ -316,6 +426,34 @@ function parseLocationId(value: string | string[] | undefined) {
   }
 
   return parsedValue;
+}
+
+function normalizeLocationTraits(traits: LocationTrait[] | undefined) {
+  if (!traits || traits.length === 0) {
+    return [];
+  }
+
+  return traits
+    .filter((trait) => typeof trait?.name === "string")
+    .map((trait, index) => ({
+      id:
+        typeof trait.id === "number" && Number.isFinite(trait.id)
+          ? trait.id
+          : -(index + 1),
+      name: trait.name.trim(),
+      sortOrder:
+        typeof trait.sortOrder === "number" && Number.isFinite(trait.sortOrder)
+          ? trait.sortOrder
+          : index,
+    }))
+    .filter((trait) => trait.name.length > 0)
+    .sort((left, right) => {
+      if (left.sortOrder !== right.sortOrder) {
+        return left.sortOrder - right.sortOrder;
+      }
+
+      return left.id - right.id;
+    });
 }
 
 type LocationDetailsColors = ReturnType<typeof getLocationDetailsColors>;
@@ -412,6 +550,10 @@ function createStyles(colors: LocationDetailsColors) {
       shadowRadius: 24,
       elevation: 6,
     },
+    gallery: {
+      gap: 12,
+      paddingBottom: 16,
+    },
     heroImage: {
       width: "100%",
       height: 240,
@@ -427,14 +569,42 @@ function createStyles(colors: LocationDetailsColors) {
       fontWeight: "700",
       textTransform: "uppercase",
     },
+    galleryThumbnailRow: {
+      gap: 10,
+      paddingHorizontal: 16,
+    },
+    galleryThumbnailButton: {
+      width: 84,
+      height: 84,
+      borderRadius: 10,
+      overflow: "hidden",
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+    },
+    galleryThumbnailButtonSelected: {
+      borderColor: colors.accent,
+      borderWidth: 2,
+    },
+    galleryThumbnailButtonPressed: {
+      opacity: 0.86,
+    },
+    galleryThumbnailImage: {
+      width: "100%",
+      height: "100%",
+    },
     heroCopy: {
-      padding: 20,
+      position: "relative",
+      paddingHorizontal: 20,
+      paddingRight: 84,
+      paddingBottom: 20,
       gap: 8,
     },
     locationTitle: {
       color: colors.title,
       fontSize: 28,
       fontWeight: "700",
+      marginTop: 12,
       lineHeight: 34,
     },
     locationMeta: {
@@ -446,6 +616,22 @@ function createStyles(colors: LocationDetailsColors) {
       color: colors.subtle,
       fontSize: 14,
       fontWeight: "600",
+    },
+    heroInfoButton: {
+      position: "absolute",
+      right: 20,
+      bottom: 20,
+      width: 42,
+      height: 42,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.chipBackground,
+    },
+    heroInfoButtonPressed: {
+      opacity: 0.84,
     },
     detailsCard: {
       borderRadius: 24,

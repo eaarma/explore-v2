@@ -48,7 +48,8 @@ public class Journey {
     @Column(columnDefinition = "TEXT")
     private String polyline;
 
-    private Integer notes;
+    @Column(columnDefinition = "TEXT")
+    private String notes;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -59,6 +60,11 @@ public class Journey {
     @OrderBy("sortOrder ASC")
     @Builder.Default
     private List<JourneyLocation> locations = new ArrayList<>();
+
+    @OneToMany(mappedBy = "journey", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("sortOrder ASC")
+    @Builder.Default
+    private List<JourneyTrait> traits = new ArrayList<>();
 
     @Column(nullable = false, updatable = false)
     private Instant createdAt;

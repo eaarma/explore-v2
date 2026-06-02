@@ -1,50 +1,39 @@
-# Welcome to your Expo app 👋
+# Explore Mobile
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+## Local development
 
-## Get started
+Copy `.env.example` to `.env` and replace the placeholders you need:
 
-1. Install dependencies
+- `EXPO_PUBLIC_API_URL`
+- `EXPO_PUBLIC_MAPTILER_API_KEY`
 
-   ```bash
-   npm install
-   ```
+Location image uploads are backend-managed, so the mobile app does not need any
+public Firebase Storage env vars for the current architecture.
 
-2. Start the app
+If `EXPO_PUBLIC_API_URL` is missing during local development, the app can still
+fall back to the local Expo host or emulator defaults.
 
-   ```bash
-   npx expo start
-   ```
+## Tests
 
-In the output, you'll find options to open the app in a
+Run the mobile unit tests with:
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+- `npm test`
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+For CI-style local runs without workers or watch mode:
 
-## Get a fresh project
+- `npm run test:ci`
 
-When you're ready, run:
+## Preview builds
 
-```bash
-npm run reset-project
-```
+The `preview` EAS profile builds a debug Android artifact and currently points
+at the LAN HTTP backend configured in [eas.json](./eas.json). That keeps the
+physical-device development workflow working without weakening production.
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Production builds
 
-## Learn more
+Production builds must provide `EXPO_PUBLIC_API_URL` before build time, and it
+must use `https://`. The production EAS profile will now fail fast if that
+variable is missing or still points to plain HTTP.
 
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Use `.env.production.example` as the template for the public variables you want
+to define in EAS or CI.

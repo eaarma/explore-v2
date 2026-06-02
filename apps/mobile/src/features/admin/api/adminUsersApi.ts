@@ -1,7 +1,7 @@
 import { AuthUser } from "@/src/features/auth/types/authTypes";
 import { apiClient } from "@/src/shared/api/apiClient";
 
-const ADMIN_USERS_BASE_PATH = "/manager/users";
+const ADMIN_USERS_BASE_PATH = "/admin/users";
 
 export type AdminUser = AuthUser;
 export type UpdateAdminUserRequest = {

@@ -4,6 +4,7 @@ import com.explore.app.auth.dto.LoginRequest;
 import com.explore.app.auth.dto.LoginResponse;
 import com.explore.app.auth.dto.RegisterRequest;
 import com.explore.app.security.jwt.JwtService;
+import com.explore.app.shared.BadRequestException;
 import com.explore.app.user.model.Role;
 import com.explore.app.user.model.User;
 import com.explore.app.user.mapper.UserMapper;
@@ -21,10 +22,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class AuthService {
+
+    private static final String TERMS_VERSION = "2026-05-31";
+    private static final String PRIVACY_POLICY_VERSION = "2026-05-31";
 
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
@@ -53,6 +59,11 @@ public class AuthService {
     @Transactional
     public LoginResponse register(RegisterRequest request) {
         String email = request.getNormalizedEmail();
+        Instant acceptedAt = Instant.now();
+
+        if (!request.isTermsAccepted() || !request.isPrivacyPolicyAccepted()) {
+            throw new BadRequestException("Terms and Privacy Policy must be accepted.");
+        }
 
         if (userRepository.existsByEmail(email)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "User with this email already exists");
@@ -64,6 +75,12 @@ public class AuthService {
                 .name(request.getNormalizedName())
                 .role(Role.USER)
                 .status(UserStatus.ACTIVE)
+                .termsAccepted(true)
+                .privacyPolicyAccepted(true)
+                .termsAcceptedAt(acceptedAt)
+                .privacyPolicyAcceptedAt(acceptedAt)
+                .termsVersion(TERMS_VERSION)
+                .privacyPolicyVersion(PRIVACY_POLICY_VERSION)
                 .build();
 
         User savedUser = userRepository.save(user);

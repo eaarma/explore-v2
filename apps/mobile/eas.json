@@ -1,12 +1,12 @@
 {
   "build": {
     "preview": {
+      "distribution": "internal",
       "android": {
-        "buildType": "apk"
+        "gradleCommand": ":app:assembleDebug"
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "http://10.17.100.84:8080",
-        "EXPO_ANDROID_ALLOW_CLEARTEXT": "1",
         "EXPO_USE_COMMUNITY_AUTOLINKING": "1"
       }
     },

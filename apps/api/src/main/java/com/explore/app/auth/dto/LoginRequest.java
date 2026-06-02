@@ -20,6 +20,10 @@ public class LoginRequest {
     @Size(max = 100)
     private String password;
 
+    public void setEmail(String email) {
+        this.email = email == null ? null : email.trim();
+    }
+
     public String getNormalizedEmail() {
         return email == null ? null : email.trim().toLowerCase();
     }

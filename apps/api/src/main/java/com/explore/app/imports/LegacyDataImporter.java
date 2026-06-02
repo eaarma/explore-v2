@@ -82,7 +82,6 @@ public class LegacyDataImporter implements ApplicationRunner {
                         point,
                         county,
                         category,
-                        image_url,
                         experience,
                         difficulty,
                         notes,
@@ -99,7 +98,6 @@ public class LegacyDataImporter implements ApplicationRunner {
                         ST_GeogFromText(:point),
                         :county,
                         :category,
-                        :imageUrl,
                         :experience,
                         :difficulty,
                         :notes,
@@ -121,16 +119,37 @@ public class LegacyDataImporter implements ApplicationRunner {
                                     legacy.latitude()))
                     .setParameter("county", legacy.county())
                     .setParameter("category", CategoryNormalizer.normalizeOptionalCategory(legacy.category()))
-                    .setParameter("imageUrl", legacy.image())
                     .setParameter("experience", legacy.experience())
                     .setParameter("difficulty", legacy.difficulty())
-                    .setParameter("notes", legacy.notes())
+                    .setParameter(
+                            "notes",
+                            legacy.notes() != null ? String.valueOf(legacy.notes()) : null)
                     .setParameter(
                             "status",
                             toLocationStatus(
                                     legacy.status(),
                                     legacy.active()).name())
                     .executeUpdate();
+
+            if (legacy.image() != null && !legacy.image().isBlank()) {
+                entityManager.createNativeQuery("""
+                        INSERT INTO location_images(
+                            location_id,
+                            image_url,
+                            is_cover,
+                            sort_order
+                        )
+                        VALUES(
+                            :locationId,
+                            :imageUrl,
+                            TRUE,
+                            0
+                        )
+                        """)
+                        .setParameter("locationId", legacy.id())
+                        .setParameter("imageUrl", legacy.image())
+                        .executeUpdate();
+            }
         }
     }
 
@@ -185,7 +204,9 @@ public class LegacyDataImporter implements ApplicationRunner {
                     .setParameter("distance", legacy.distance())
                     .setParameter("difficulty", legacy.difficulty())
                     .setParameter("polyline", legacy.polyline())
-                    .setParameter("notes", legacy.notes())
+                    .setParameter(
+                            "notes",
+                            legacy.notes() != null ? String.valueOf(legacy.notes()) : null)
                     .setParameter(
                             "status",
                             toJourneyStatus(

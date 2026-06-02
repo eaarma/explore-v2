@@ -1,18 +1,25 @@
 import { useEffect } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { useFonts } from "expo-font";
+import { Image } from "expo-image";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
+
 import { getCurrentUser } from "@/src/features/auth/api/authApi";
+import { useAuthStore } from "@/src/features/auth/store/authStore";
 import { useDiscoveryProgressStore } from "@/src/features/discoveries/store/discoveryProgressStore";
 import { rehydrateDiscoveryProgressFromBackend } from "@/src/features/discoveries/sync/discoveryProgressRehydration";
-import { useAuthStore } from "@/src/features/auth/store/authStore";
-import {
-  clearAuthSession,
-  getStoredAuthSession,
-} from "@/src/shared/storage/tokenStorage";
 import {
   isApiNetworkError,
   isUnauthorizedApiError,
 } from "@/src/shared/api/apiError";
+import {
+  clearAuthSession,
+  getStoredAuthSession,
+} from "@/src/shared/storage/tokenStorage";
+
+// Replace this asset or change this path if the startup artwork changes.
+const STARTUP_ICON_SOURCE = require("../assets/images/explore_icon_v2.png");
+const STARTUP_TITLE_FONT = require("../assets/fonts/Rockabilly.ttf");
 
 export default function StartupScreen() {
   const restoreSession = useAuthStore((state) => state.restoreSession);
@@ -21,6 +28,9 @@ export default function StartupScreen() {
   const markDiscoveryProgressUpdated = useDiscoveryProgressStore(
     (state) => state.markUpdated,
   );
+  const [fontsLoaded] = useFonts({
+    Rockabilly: STARTUP_TITLE_FONT,
+  });
 
   useEffect(() => {
     let isActive = true;
@@ -101,7 +111,17 @@ export default function StartupScreen() {
 
   return (
     <View style={styles.container}>
-      <ActivityIndicator size="large" color="#111827" />
+      <View style={styles.brandLockup}>
+        <Image
+          contentFit="contain"
+          source={STARTUP_ICON_SOURCE}
+          style={styles.icon}
+        />
+        <Text style={[styles.title, fontsLoaded ? styles.font : null]}>
+          Explore
+        </Text>
+      </View>
+      <ActivityIndicator color="#111827" size="large" />
     </View>
   );
 }
@@ -111,6 +131,27 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    gap: 20,
     backgroundColor: "#fff",
+  },
+  brandLockup: {
+    alignItems: "center",
+    gap: 10,
+  },
+  icon: {
+    width: 180,
+    height: 180,
+    borderRadius: 32,
+  },
+  title: {
+    color: "#111827",
+    fontSize: 34,
+    lineHeight: 40,
+    fontWeight: "600",
+    letterSpacing: 0.4,
+  },
+  font: {
+    fontFamily: "Rockabilly",
+    fontWeight: "400",
   },
 });

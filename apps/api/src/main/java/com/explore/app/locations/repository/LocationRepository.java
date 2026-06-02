@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface LocationRepository extends JpaRepository<Location, Long> {
 
@@ -19,9 +20,15 @@ public interface LocationRepository extends JpaRepository<Location, Long> {
 
     List<Location> findByStatus(LocationStatus status);
 
+    Optional<Location> findByIdAndStatus(Long id, LocationStatus status);
+
     List<Location> findByCategoryIgnoreCase(String category);
 
+    List<Location> findByCategoryIgnoreCaseAndStatus(String category, LocationStatus status);
+
     List<Location> findByCountyIgnoreCase(String county);
+
+    List<Location> findByCountyIgnoreCaseAndStatus(String county, LocationStatus status);
 
     @Query(value = """
             SELECT

@@ -48,6 +48,24 @@ public class User {
     @Column(nullable = false)
     private UserStatus status;
 
+    @Column(name = "terms_accepted", nullable = false)
+    private boolean termsAccepted;
+
+    @Column(name = "privacy_policy_accepted", nullable = false)
+    private boolean privacyPolicyAccepted;
+
+    @Column(name = "terms_accepted_at")
+    private Instant termsAcceptedAt;
+
+    @Column(name = "privacy_policy_accepted_at")
+    private Instant privacyPolicyAcceptedAt;
+
+    @Column(name = "terms_version")
+    private String termsVersion;
+
+    @Column(name = "privacy_policy_version")
+    private String privacyPolicyVersion;
+
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
 

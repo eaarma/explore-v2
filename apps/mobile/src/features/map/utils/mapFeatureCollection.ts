@@ -11,8 +11,8 @@ type MapPoint = {
   id: number;
   title: string;
   category: string;
-  latitude: number;
-  longitude: number;
+  latitude: number | string | null | undefined;
+  longitude: number | string | null | undefined;
 };
 
 export function createPointFeatureCollection<T extends MapPoint>(
@@ -27,7 +27,14 @@ export function createPointFeatureCollection<T extends MapPoint>(
 ) {
   return {
     type: "FeatureCollection" as const,
-    features: points.map((point) => {
+    features: points.flatMap((point) => {
+      const latitude = coerceCoordinate(point.latitude);
+      const longitude = coerceCoordinate(point.longitude);
+
+      if (latitude === null || longitude === null) {
+        return [];
+      }
+
       const normalizedCategory =
         kind === "journey"
           ? normalizeJourneyCategory(point.category)
@@ -36,29 +43,31 @@ export function createPointFeatureCollection<T extends MapPoint>(
       const active = options.isActive(point);
       const tripHighlighted = options.isTripHighlighted(point);
 
-      return {
-        type: "Feature" as const,
-        id: `${kind}-${point.id}`,
-        properties: {
-          id: point.id,
-          kind,
-          title: point.title,
-          category: normalizedCategory,
-          markerIcon: getMapMarkerImageId(
+      return [
+        {
+          type: "Feature" as const,
+          id: `${kind}-${point.id}`,
+          properties: {
+            id: point.id,
             kind,
-            normalizedCategory,
-            getMapMarkerState(achieved, active),
-          ),
-          achieved,
-          active,
-          tripHighlighted,
-          selected: point.id === selectedId,
+            title: point.title,
+            category: normalizedCategory,
+            markerIcon: getMapMarkerImageId(
+              kind,
+              normalizedCategory,
+              getMapMarkerState(achieved, active),
+            ),
+            achieved,
+            active,
+            tripHighlighted,
+            selected: point.id === selectedId,
+          },
+          geometry: {
+            type: "Point" as const,
+            coordinates: [longitude, latitude],
+          },
         },
-        geometry: {
-          type: "Point" as const,
-          coordinates: [point.longitude, point.latitude],
-        },
-      };
+      ];
     }),
   };
 }
@@ -115,5 +124,27 @@ export function isCategoryVisible(
 export function hasValidCoordinates(
   point: Pick<MapPoint, "latitude" | "longitude">,
 ) {
-  return Number.isFinite(point.latitude) && Number.isFinite(point.longitude);
+  return (
+    coerceCoordinate(point.latitude) !== null &&
+    coerceCoordinate(point.longitude) !== null
+  );
+}
+
+export function coerceCoordinate(value: unknown) {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmedValue = value.trim();
+
+  if (trimmedValue.length === 0) {
+    return null;
+  }
+
+  const parsedValue = Number(trimmedValue);
+  return Number.isFinite(parsedValue) ? parsedValue : null;
 }

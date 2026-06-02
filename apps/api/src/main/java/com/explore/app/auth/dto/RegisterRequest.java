@@ -27,6 +27,18 @@ public class RegisterRequest {
     @Size(max = 150)
     private String name;
 
+    private boolean termsAccepted;
+
+    private boolean privacyPolicyAccepted;
+
+    public void setEmail(String email) {
+        this.email = email == null ? null : email.trim();
+    }
+
+    public void setName(String name) {
+        this.name = name == null ? null : name.trim();
+    }
+
     public String getNormalizedEmail() {
         return email == null ? null : email.trim().toLowerCase();
     }

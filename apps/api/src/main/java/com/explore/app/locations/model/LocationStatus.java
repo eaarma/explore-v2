@@ -1,5 +1,7 @@
 package com.explore.app.locations.model;
 
+import com.explore.app.shared.BadRequestException;
+
 public enum LocationStatus {
     ACTIVE(1),
     INACTIVE(0),
@@ -26,6 +28,6 @@ public enum LocationStatus {
             }
         }
 
-        return ACTIVE;
+        throw new BadRequestException("Invalid location status code: " + code);
     }
 }

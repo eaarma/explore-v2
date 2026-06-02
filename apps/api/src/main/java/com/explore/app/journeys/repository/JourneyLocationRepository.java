@@ -2,6 +2,7 @@ package com.explore.app.journeys.repository;
 
 import com.explore.app.journeys.model.JourneyLocation;
 import com.explore.app.journeys.model.JourneyStatus;
+import com.explore.app.locations.model.LocationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,6 +14,8 @@ import java.util.Optional;
 public interface JourneyLocationRepository extends JpaRepository<JourneyLocation, Long> {
 
     List<JourneyLocation> findByJourneyIdOrderBySortOrderAsc(Long journeyId);
+
+    List<JourneyLocation> findByJourneyIdAndLocationStatusOrderBySortOrderAsc(Long journeyId, LocationStatus status);
 
     Optional<JourneyLocation> findByJourneyIdAndLocationId(Long journeyId, Long locationId);
 

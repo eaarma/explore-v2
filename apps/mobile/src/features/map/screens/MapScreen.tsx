@@ -104,6 +104,7 @@ export function MapScreen() {
   const {
     currentPosition,
     ensureLocationPermission,
+    latestPosition,
     locationPermissionGranted,
   } = useMapLocationPermission();
   const {
@@ -153,7 +154,6 @@ export function MapScreen() {
   const [activeToggleTargetKey, setActiveToggleTargetKey] = useState<
     string | null
   >(null);
-
   const selectedLocationId =
     selectedTarget?.kind === "location" && bottomSheetState !== "hidden"
       ? selectedTarget.id
@@ -219,6 +219,14 @@ export function MapScreen() {
     selectedLocationId,
     selectedTarget,
   });
+  const mapCanvasKey = useMemo(() => {
+    const resolvedStyleKey =
+      typeof resolvedMapStyle === "string"
+        ? resolvedMapStyle
+        : `${selectedMapStyle}-adjusted`;
+
+    return `${resolvedStyleKey}-${roadLabelLayerId ?? "no-road-label"}`;
+  }, [resolvedMapStyle, roadLabelLayerId, selectedMapStyle]);
   const chromeColors = useMemo(
     () =>
       isDark
@@ -471,7 +479,9 @@ export function MapScreen() {
     }
 
     const resolvedPosition =
-      currentPosition ?? (await LocationManager.getCurrentPosition());
+      latestPosition ??
+      (await LocationManager.getCurrentPosition()) ??
+      currentPosition;
 
     if (!resolvedPosition) {
       return;
@@ -754,6 +764,7 @@ export function MapScreen() {
   return (
     <View style={styles.container}>
       <MapCanvas
+        key={mapCanvasKey}
         cameraRef={cameraRef}
         contentRevision={contentRevision}
         journeyGeoJson={journeyGeoJson}

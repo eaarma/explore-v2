@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -24,7 +25,8 @@ public class JourneyResponse {
     private Double distance;
     private Integer difficulty;
     private String polyline;
-    private Integer notes;
+    private List<JourneyTraitResponse> traits;
+    private String notes;
     private Integer status;
     private Instant createdAt;
     private Instant updatedAt;

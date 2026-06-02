@@ -1,19 +1,41 @@
+import { useAppSettingsStore } from "@/src/features/settings/store/appSettingsStore";
 import { SettingsDocumentScreen } from "@/src/features/settings/screens/SettingsDocumentScreen";
 
 export default function LicensesRoute() {
+  const appTitle = useAppSettingsStore((state) => state.appTitle);
+
   return (
     <SettingsDocumentScreen
-      eyebrow="Info"
-      title="Licenses"
-      description="This placeholder page is ready for a fuller third-party notices view before release."
+      eyebrow="Notices"
+      title="Attributions & Licenses"
+      description={`${appTitle} uses open-source software and mapping services.`}
       sections={[
         {
-          title: "Core stack",
-          body: "This mobile app is built with Expo, React Native, Expo Router, Zustand, and MapLibre React Native, alongside other open-source packages listed in the project manifest.",
+          title: "Major technologies",
+          items: [
+            "React Native",
+            "Expo",
+            "MapLibre",
+            "OpenStreetMap",
+            "MapTiler",
+            "Firebase",
+          ],
         },
         {
-          title: "Before release",
-          body: "A full third-party notices list can be added here once launch packaging is finalized and the exact dependency set is locked.",
+          title: "Map data",
+          body: "© OpenStreetMap contributors",
+        },
+        {
+          title: "Map tiles",
+          body: "© MapTiler",
+        },
+        {
+          title: "Open-source software",
+          body: "This application uses various open-source libraries licensed under MIT, Apache 2.0, and other compatible licenses.",
+        },
+        {
+          title: "Additional license information",
+          body: "Additional license information is available from the respective projects.",
         },
       ]}
     />

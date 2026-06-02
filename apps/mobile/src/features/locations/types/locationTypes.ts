@@ -1,3 +1,9 @@
+export type LocationTrait = {
+  id: number;
+  name: string;
+  sortOrder: number;
+};
+
 export type Location = {
   id: number;
   title: string;
@@ -7,9 +13,11 @@ export type Location = {
   county: string;
   category: string;
   imageUrl: string | null;
+  imageUrls?: string[];
+  traits?: LocationTrait[];
   experience: number;
   difficulty: number;
-  notes: number;
+  notes: string | null;
   status: number;
   createdAt: string;
   updatedAt: string;

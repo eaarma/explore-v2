@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Image } from "expo-image";
 import { Redirect, Stack, useLocalSearchParams, useRouter } from "expo-router";
 import {
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,6 +13,14 @@ import {
   type UpdateAdminLocationRequest,
   updateAdminLocation,
 } from "@/src/features/admin/api/adminLocationsApi";
+import {
+  AdminLocationImageManager,
+  type AdminLocationImageDraft,
+  createAdminLocationImageDrafts,
+  getAdminLocationImages,
+  getAdminLocationImageUrls,
+  getPrimaryAdminLocationImageUrl,
+} from "@/src/features/admin/components/AdminLocationImageManager";
 import { useAuthStore } from "@/src/features/auth/store/authStore";
 import { bootstrapContentCacheIfNeeded } from "@/src/features/content/storage/contentBootstrap";
 import { hydrateLocationWithProgress } from "@/src/features/discoveries/storage/discoveryCache";
@@ -25,10 +31,14 @@ import {
   getLocationById,
 } from "@/src/features/locations/api/locationsApi";
 import { normalizeCategory } from "@/src/features/locations/components/locationsSectionShared";
-import { Location } from "@/src/features/locations/types/locationTypes";
-import { CategoryImagePlaceholder } from "@/src/shared/components/CategoryImagePlaceholder";
+import {
+  Location,
+  type LocationTrait,
+} from "@/src/features/locations/types/locationTypes";
 import { getApiErrorMessage } from "@/src/shared/api/apiError";
+import { InlineFeedbackCard } from "@/src/shared/components/InlineFeedbackCard";
 import { useColorScheme } from "@/src/shared/hooks/use-color-scheme";
+import { showAppToast } from "@/src/shared/store/appFeedbackStore";
 import {
   cacheActiveContent,
   getCachedJourneys,
@@ -49,7 +59,8 @@ type LocationEditDraft = {
   difficulty: string;
   experience: string;
   notes: string;
-  imageUrl: string;
+  traits: string[];
+  imageDrafts: AdminLocationImageDraft[];
 };
 
 const LOCATION_STATUS_OPTIONS = [
@@ -92,6 +103,7 @@ export function AdminLocationDetailsScreen() {
   const [draft, setDraft] = useState<LocationEditDraft | null>(null);
   const [isLoadingLocation, setIsLoadingLocation] = useState(true);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -142,14 +154,14 @@ export function AdminLocationDetailsScreen() {
           }
         }
 
-        if (!nextLocation) {
-          try {
-            nextLocation = await getLocationById(resolvedLocationId);
-            nextLocation = await hydrateLocationWithProgress(
-              user?.id,
-              nextLocation,
-            );
-          } catch {
+        try {
+          nextLocation = await getLocationById(resolvedLocationId);
+          nextLocation = await hydrateLocationWithProgress(
+            user?.id,
+            nextLocation,
+          );
+        } catch {
+          if (!nextLocation) {
             const activeLocations = await getActiveLocations();
             nextLocation =
               activeLocations.find(
@@ -235,9 +247,6 @@ export function AdminLocationDetailsScreen() {
     : location
       ? getPublicationStatusLabel(location.status)
       : "Unknown";
-  const currentImageUrl = editableValues
-    ? toNullableImageUrl(editableValues.imageUrl)
-    : (location?.imageUrl ?? null);
 
   function updateDraft<Field extends keyof LocationEditDraft>(
     field: Field,
@@ -248,6 +257,22 @@ export function AdminLocationDetailsScreen() {
         ? {
             ...currentDraft,
             [field]: value,
+          }
+        : currentDraft,
+    );
+    setFormError(null);
+  }
+
+  function updateImageDrafts(
+    updater: (
+      currentImageDrafts: AdminLocationImageDraft[],
+    ) => AdminLocationImageDraft[],
+  ) {
+    setDraft((currentDraft) =>
+      currentDraft
+        ? {
+            ...currentDraft,
+            imageDrafts: updater(currentDraft.imageDrafts),
           }
         : currentDraft,
     );
@@ -263,6 +288,7 @@ export function AdminLocationDetailsScreen() {
       setIsEditing(false);
       setIsCategoryMenuOpen(false);
       setIsStatusMenuOpen(false);
+      setFormError(null);
       return;
     }
 
@@ -271,6 +297,7 @@ export function AdminLocationDetailsScreen() {
       setIsEditing(true);
       setIsCategoryMenuOpen(false);
       setIsStatusMenuOpen(false);
+      setFormError(null);
     }
   }
 
@@ -282,11 +309,12 @@ export function AdminLocationDetailsScreen() {
     const payload = buildLocationUpdatePayload(draft);
 
     if (!payload.success) {
-      Alert.alert("Invalid fields", payload.message);
+      setFormError(payload.message);
       return;
     }
 
     setIsSaving(true);
+    setFormError(null);
 
     try {
       const savedLocation = await updateAdminLocation(
@@ -322,15 +350,18 @@ export function AdminLocationDetailsScreen() {
         // Keep the saved server state even if local cache refresh fails.
       }
 
-      Alert.alert("Location saved", "The location changes were saved.");
+      showAppToast({
+        text: "The location changes were saved.",
+        tone: "success",
+      });
     } catch (error) {
-      Alert.alert(
-        "Save failed",
-        getApiErrorMessage(
+      showAppToast({
+        text: getApiErrorMessage(
           error,
           "Could not save the location changes right now.",
         ),
-      );
+        tone: "error",
+      });
     } finally {
       setIsSaving(false);
     }
@@ -369,10 +400,14 @@ export function AdminLocationDetailsScreen() {
         {!isLoadingLocation && !locationError && location && editableValues ? (
           <>
             <View style={styles.heroCard}>
-              <AdminLocationHeroMedia
-                imageUrl={currentImageUrl}
+              <AdminLocationImageManager
+                locationId={location.id}
                 categoryLabel={categoryLabel}
-                styles={styles}
+                imageDrafts={editableValues.imageDrafts}
+                isEditing={isEditing}
+                isDisabled={isSaving}
+                colors={themeColors}
+                onChangeImageDrafts={updateImageDrafts}
               />
 
               <View style={styles.heroCopy}>
@@ -436,11 +471,6 @@ export function AdminLocationDetailsScreen() {
                   <View style={styles.metricChip}>
                     <Text style={styles.metricChipText}>
                       Experience {editableValues.experience}
-                    </Text>
-                  </View>
-                  <View style={styles.metricChip}>
-                    <Text style={styles.metricChipText}>
-                      {editableValues.notes} notes
                     </Text>
                   </View>
                 </View>
@@ -561,21 +591,12 @@ export function AdminLocationDetailsScreen() {
                     keyboardType="number-pad"
                   />
                   <EditableField
-                    label="Notes count"
+                    label="Note"
                     value={editableValues.notes}
                     onChangeText={(value) => updateDraft("notes", value)}
                     styles={styles}
                     placeholderTextColor={themeColors.inputPlaceholder}
-                    keyboardType="number-pad"
-                  />
-                  <EditableField
-                    label="Image URL"
-                    value={editableValues.imageUrl}
-                    onChangeText={(value) => updateDraft("imageUrl", value)}
-                    styles={styles}
-                    placeholderTextColor={themeColors.inputPlaceholder}
                     multiline
-                    keyboardType="url"
                   />
                 </>
               ) : (
@@ -612,17 +633,31 @@ export function AdminLocationDetailsScreen() {
                     styles={styles}
                   />
                   <MetadataRow
-                    label="Notes count"
-                    value={String(location.notes)}
-                    styles={styles}
-                  />
-                  <MetadataRow
-                    label="Image URL"
-                    value={location.imageUrl ?? "No image URL"}
+                    label="Note"
+                    value={getMultilineTextValue(location.notes, "No note added.")}
                     styles={styles}
                     multiline
                   />
                 </>
+              )}
+
+            </View>
+
+            <View style={styles.detailsCard}>
+              <Text style={styles.sectionTitle}>Traits</Text>
+              {isEditing ? (
+                <LocationTraitsEditor
+                  traits={editableValues.traits}
+                  isDisabled={isSaving}
+                  placeholderTextColor={themeColors.inputPlaceholder}
+                  styles={styles}
+                  onChangeTraits={(traits) => updateDraft("traits", traits)}
+                />
+              ) : (
+                <LocationTraitBubbles
+                  traits={editableValues.traits}
+                  styles={styles}
+                />
               )}
             </View>
 
@@ -635,10 +670,12 @@ export function AdminLocationDetailsScreen() {
               />
               <MetadataRow
                 label="Updated at"
-                value={formatDateTime(location.updatedAt)}
-                styles={styles}
-              />
-            </View>
+              value={formatDateTime(location.updatedAt)}
+              styles={styles}
+            />
+          </View>
+
+            {formError ? <InlineFeedbackCard message={formError} /> : null}
 
             <View style={styles.actionRow}>
               {isEditing ? (
@@ -706,36 +743,6 @@ export function AdminLocationDetailsScreen() {
         ) : null}
       </ScrollView>
     </>
-  );
-}
-
-type AdminLocationHeroMediaProps = {
-  imageUrl: string | null;
-  categoryLabel: string;
-  styles: AdminLocationDetailsStyles;
-};
-
-function AdminLocationHeroMedia({
-  imageUrl,
-  categoryLabel,
-  styles,
-}: AdminLocationHeroMediaProps) {
-  if (!imageUrl) {
-    return (
-      <CategoryImagePlaceholder
-        categoryLabel={categoryLabel}
-        size="large"
-        style={styles.heroImage}
-      />
-    );
-  }
-
-  return (
-    <Image
-      source={{ uri: imageUrl }}
-      style={styles.heroImage}
-      contentFit="cover"
-    />
   );
 }
 
@@ -872,6 +879,140 @@ function EditableSelectField({
   );
 }
 
+type LocationTraitsEditorProps = {
+  traits: string[];
+  isDisabled: boolean;
+  placeholderTextColor: string;
+  styles: AdminLocationDetailsStyles;
+  onChangeTraits: (traits: string[]) => void;
+};
+
+function LocationTraitsEditor({
+  traits,
+  isDisabled,
+  placeholderTextColor,
+  styles,
+  onChangeTraits,
+}: LocationTraitsEditorProps) {
+  const [nextTrait, setNextTrait] = useState("");
+  const normalizedNextTrait = normalizeTraitName(nextTrait);
+  const canAddTrait =
+    !isDisabled &&
+    normalizedNextTrait.length > 0 &&
+    !traits.some(
+      (trait) => trait.trim().toLowerCase() === normalizedNextTrait.toLowerCase(),
+    );
+
+  function handleAddTrait() {
+    if (!canAddTrait) {
+      return;
+    }
+
+    onChangeTraits([...traits, normalizedNextTrait]);
+    setNextTrait("");
+  }
+
+  function handleRemoveTrait(indexToRemove: number) {
+    if (isDisabled) {
+      return;
+    }
+
+    onChangeTraits(traits.filter((_, index) => index !== indexToRemove));
+  }
+
+  return (
+    <View style={styles.traitsEditorGroup}>
+      {traits.length > 0 ? (
+        <LocationTraitBubbles
+          traits={traits}
+          styles={styles}
+          onRemoveTrait={handleRemoveTrait}
+          isEditable
+          isDisabled={isDisabled}
+        />
+      ) : (
+        <Text style={styles.emptyStateCopy}>
+          Add traits like secluded, family-friendly, or steep climb.
+        </Text>
+      )}
+
+      <View style={styles.traitInputRow}>
+        <TextInput
+          value={nextTrait}
+          onChangeText={setNextTrait}
+          editable={!isDisabled}
+          style={[styles.textInput, styles.traitInput]}
+          placeholder="Add a trait"
+          placeholderTextColor={placeholderTextColor}
+          returnKeyType="done"
+          onSubmitEditing={handleAddTrait}
+        />
+
+        <Pressable
+          disabled={!canAddTrait}
+          onPress={handleAddTrait}
+          style={({ pressed }) => [
+            styles.traitAddButton,
+            pressed && styles.traitAddButtonPressed,
+            !canAddTrait && styles.traitAddButtonDisabled,
+          ]}
+        >
+          <Text style={styles.traitAddButtonText}>Add</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+type LocationTraitBubblesProps = {
+  traits: string[] | LocationTrait[] | undefined;
+  styles: AdminLocationDetailsStyles;
+  onRemoveTrait?: (index: number) => void;
+  isEditable?: boolean;
+  isDisabled?: boolean;
+};
+
+function LocationTraitBubbles({
+  traits,
+  styles,
+  onRemoveTrait,
+  isEditable = false,
+  isDisabled = false,
+}: LocationTraitBubblesProps) {
+  const normalizedTraits = normalizeTraitList(traits);
+
+  if (normalizedTraits.length === 0) {
+    return <Text style={styles.emptyStateCopy}>No traits added yet.</Text>;
+  }
+
+  return (
+    <View style={styles.traitsWrap}>
+      {normalizedTraits.map((trait, index) => (
+        <View key={`${trait}-${index}`} style={styles.traitChip}>
+          <Text style={styles.traitChipText}>{trait}</Text>
+
+          {isEditable && onRemoveTrait ? (
+            <Pressable
+              accessibilityLabel={`Remove ${trait} trait`}
+              accessibilityRole="button"
+              disabled={isDisabled}
+              hitSlop={6}
+              onPress={() => onRemoveTrait(index)}
+              style={({ pressed }) => [
+                styles.traitRemoveButton,
+                pressed && styles.traitRemoveButtonPressed,
+                isDisabled && styles.traitRemoveButtonDisabled,
+              ]}
+            >
+              <Text style={styles.traitRemoveButtonText}>x</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function parseLocationId(value: string | string[] | undefined) {
   if (!value) {
     return null;
@@ -898,8 +1039,12 @@ function createLocationEditDraft(location: Location): LocationEditDraft {
     status: String(location.status),
     difficulty: String(location.difficulty),
     experience: String(location.experience),
-    notes: String(location.notes),
-    imageUrl: location.imageUrl ?? "",
+    notes: normalizeOptionalText(location.notes),
+    traits: normalizeTraitList(location.traits),
+    imageDrafts: createAdminLocationImageDrafts(
+      location.imageUrls,
+      location.imageUrl,
+    ),
   };
 }
 
@@ -908,6 +1053,20 @@ function buildLocationUpdatePayload(
 ):
   | { success: true; value: UpdateAdminLocationRequest }
   | { success: false; message: string } {
+  if (draft.imageDrafts.some((imageDraft) => imageDraft.uploadState === "uploading")) {
+    return {
+      success: false,
+      message: "Wait for the current image upload to finish before saving.",
+    };
+  }
+
+  if (draft.imageDrafts.some((imageDraft) => imageDraft.uploadState === "error")) {
+    return {
+      success: false,
+      message: "Remove failed image uploads before saving the location.",
+    };
+  }
+
   const latitude = parseRequiredNumber(draft.latitude, "Latitude");
   if (!latitude.success) {
     return latitude;
@@ -938,11 +1097,6 @@ function buildLocationUpdatePayload(
     return experience;
   }
 
-  const notes = parseRequiredInteger(draft.notes, "Notes count");
-  if (!notes.success) {
-    return notes;
-  }
-
   return {
     success: true,
     value: {
@@ -952,10 +1106,13 @@ function buildLocationUpdatePayload(
       longitude: longitude.value,
       county: draft.county,
       category: category.value,
-      imageUrl: draft.imageUrl,
+      images: getAdminLocationImages(draft.imageDrafts),
+      imageUrl: getPrimaryAdminLocationImageUrl(draft.imageDrafts),
+      imageUrls: getAdminLocationImageUrls(draft.imageDrafts),
+      traits: draft.traits.map((trait) => ({ name: trait })),
       experience: experience.value,
       difficulty: difficulty.value,
-      notes: notes.value,
+      notes: draft.notes,
       status: status.value,
     },
   };
@@ -1107,24 +1264,60 @@ function normalizeLocationCategoryValue(value: string | null | undefined) {
   );
 }
 
-function formatBoolean(value: boolean | null | undefined) {
-  if (value === true) {
-    return "Yes";
+function normalizeOptionalText(value: unknown) {
+  if (typeof value === "string") {
+    return value;
   }
 
-  if (value === false) {
-    return "No";
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
   }
 
-  return "Unknown";
+  return "";
 }
 
-function formatOptionalDateTime(value: string | null | undefined) {
-  if (!value) {
-    return "Not available";
+function normalizeTraitName(value: unknown) {
+  const normalizedValue = normalizeOptionalText(value).trim();
+  return normalizedValue;
+}
+
+function normalizeTraitList(traits: string[] | LocationTrait[] | undefined) {
+  if (!traits || traits.length === 0) {
+    return [];
   }
 
-  return formatDateTime(value);
+  const normalizedTraits: string[] = [];
+  const seenTraits = new Set<string>();
+
+  for (const trait of traits) {
+    const rawName = typeof trait === "string" ? trait : trait?.name;
+    const normalizedName = normalizeTraitName(rawName);
+
+    if (!normalizedName) {
+      continue;
+    }
+
+    const dedupeKey = normalizedName.toLowerCase();
+
+    if (seenTraits.has(dedupeKey)) {
+      continue;
+    }
+
+    seenTraits.add(dedupeKey);
+    normalizedTraits.push(normalizedName);
+  }
+
+  return normalizedTraits;
+}
+
+function getMultilineTextValue(value: unknown, emptyValueText: string) {
+  const normalizedValue = normalizeOptionalText(value).trim();
+
+  if (!normalizedValue) {
+    return emptyValueText;
+  }
+
+  return normalizedValue;
 }
 
 function formatDateTime(value: string) {
@@ -1135,16 +1328,6 @@ function formatDateTime(value: string) {
   }
 
   return new Date(parsedValue).toLocaleString();
-}
-
-function toNullableImageUrl(value: string) {
-  const trimmedValue = value.trim();
-
-  if (trimmedValue.length === 0) {
-    return null;
-  }
-
-  return trimmedValue;
 }
 
 type AdminLocationDetailsColors = ReturnType<
@@ -1237,14 +1420,10 @@ function createStyles(colors: AdminLocationDetailsColors) {
       borderWidth: 1,
       borderColor: colors.border,
       backgroundColor: colors.surface,
-      overflow: "hidden",
-    },
-    heroImage: {
-      width: "100%",
-      height: 240,
+      padding: 20,
+      gap: 20,
     },
     heroCopy: {
-      padding: 22,
       gap: 10,
     },
     heroHeaderRow: {
@@ -1359,6 +1538,11 @@ function createStyles(colors: AdminLocationDetailsColors) {
     metadataValueMultiline: {
       flexShrink: 1,
     },
+    emptyStateCopy: {
+      color: colors.body,
+      fontSize: 15,
+      lineHeight: 22,
+    },
     textInput: {
       borderRadius: 16,
       borderWidth: 1,
@@ -1374,6 +1558,81 @@ function createStyles(colors: AdminLocationDetailsColors) {
       lineHeight: 22,
       paddingTop: 12,
       paddingBottom: 12,
+    },
+    traitsEditorGroup: {
+      gap: 12,
+    },
+    traitInputRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 10,
+    },
+    traitInput: {
+      flex: 1,
+    },
+    traitsWrap: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 10,
+    },
+    traitChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      borderRadius: 999,
+      backgroundColor: colors.chipBackground,
+      paddingLeft: 12,
+      paddingRight: 8,
+      paddingVertical: 8,
+    },
+    traitChipText: {
+      color: colors.chipText,
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    traitRemoveButton: {
+      width: 22,
+      height: 22,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.inputBorder,
+      backgroundColor: colors.inputBackground,
+    },
+    traitRemoveButtonPressed: {
+      opacity: 0.84,
+    },
+    traitRemoveButtonDisabled: {
+      opacity: 0.52,
+    },
+    traitRemoveButtonText: {
+      color: colors.accent,
+      fontSize: 13,
+      fontWeight: "700",
+      lineHeight: 15,
+      textTransform: "uppercase",
+    },
+    traitAddButton: {
+      minHeight: 48,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 16,
+      backgroundColor: colors.primaryActionBackground,
+      paddingHorizontal: 16,
+    },
+    traitAddButtonPressed: {
+      opacity: 0.88,
+    },
+    traitAddButtonDisabled: {
+      opacity: 0.56,
+    },
+    traitAddButtonText: {
+      color: colors.primaryActionText,
+      fontSize: 14,
+      fontWeight: "700",
+      textTransform: "uppercase",
+      letterSpacing: 0.4,
     },
     selectButton: {
       minHeight: 48,

@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useMemo, useState } from "react";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Image } from "expo-image";
@@ -23,7 +24,7 @@ import {
   normalizeCategory,
 } from "@/src/features/journeys/components/journeysSectionShared";
 import { JourneyLocation } from "@/src/features/journeys/types/journeyLocationTypes";
-import { Journey } from "@/src/features/journeys/types/journeyTypes";
+import { Journey, type JourneyTrait } from "@/src/features/journeys/types/journeyTypes";
 import { normalizeCategory as normalizeLocationCategory } from "@/src/features/locations/components/locationsSectionShared";
 import { useColorScheme } from "@/src/shared/hooks/use-color-scheme";
 import {
@@ -32,13 +33,18 @@ import {
   initializeContentCache,
 } from "@/src/shared/storage/contentCache";
 import { useContentSyncStore } from "@/src/shared/store/contentSyncStore";
+import {
+  ContentNoteDialog,
+  hasContentNote,
+} from "@/src/shared/components/ContentNoteDialog";
 
 export function JourneyDetailsScreen() {
   const colorScheme = useColorScheme();
-  const styles = useMemo(
-    () => createStyles(getJourneyDetailsColors(colorScheme === "dark")),
+  const colors = useMemo(
+    () => getJourneyDetailsColors(colorScheme === "dark"),
     [colorScheme],
   );
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const progressRevision = useDiscoveryProgressStore((state) => state.revision);
@@ -53,6 +59,10 @@ export function JourneyDetailsScreen() {
   );
   const [isLoadingJourney, setIsLoadingJourney] = useState(true);
   const [journeyError, setJourneyError] = useState<string | null>(null);
+  const [isNoteDialogVisible, setIsNoteDialogVisible] = useState(false);
+  const [autoOpenedNoteJourneyId, setAutoOpenedNoteJourneyId] = useState<
+    number | null
+  >(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -199,12 +209,27 @@ export function JourneyDetailsScreen() {
 
   const screenTitle = journey?.title ?? "Journey";
   const categoryLabel = journey ? normalizeCategory(journey.category) : "";
+  const journeyTraits = normalizeJourneyTraits(journey?.traits);
+  const shouldShowNoteButton = hasContentNote(journey?.notes);
   const previewImageUrl = useMemo(
     () =>
       journeyLocations.find((journeyLocation) => journeyLocation.imageUrl)
         ?.imageUrl ?? null,
     [journeyLocations],
   );
+
+  useEffect(() => {
+    if (!journey || !hasContentNote(journey.notes)) {
+      return;
+    }
+
+    if (autoOpenedNoteJourneyId === journey.id) {
+      return;
+    }
+
+    setIsNoteDialogVisible(true);
+    setAutoOpenedNoteJourneyId(journey.id);
+  }, [autoOpenedNoteJourneyId, journey]);
 
   return (
     <>
@@ -255,6 +280,24 @@ export function JourneyDetailsScreen() {
                   {formatStopCount(journeyLocations.length)} |{" "}
                   {getJourneyCompletionStatusLabel(journey)}
                 </Text>
+
+                {shouldShowNoteButton ? (
+                  <Pressable
+                    accessibilityLabel="Show journey note"
+                    accessibilityRole="button"
+                    onPress={() => setIsNoteDialogVisible(true)}
+                    style={({ pressed }) => [
+                      styles.heroInfoButton,
+                      pressed && styles.heroInfoButtonPressed,
+                    ]}
+                  >
+                    <Ionicons
+                      color={colors.accent}
+                      name="information"
+                      size={20}
+                    />
+                  </Pressable>
+                ) : null}
               </View>
             </View>
 
@@ -266,42 +309,20 @@ export function JourneyDetailsScreen() {
             </View>
 
             <View style={styles.detailsCard}>
-              <Text style={styles.sectionLabel}>At a glance</Text>
+              <Text style={styles.sectionLabel}>Traits</Text>
 
               <View style={styles.metricRow}>
-                <View style={styles.metricChip}>
-                  <Text style={styles.metricChipText}>
-                    {formatRouteDistance(journey.distance)}
-                  </Text>
-                </View>
-
                 <View style={styles.metricChip}>
                   <Text style={styles.metricChipText}>
                     Difficulty {formatDifficulty(journey.difficulty)}
                   </Text>
                 </View>
 
-                <View style={styles.metricChip}>
-                  <Text style={styles.metricChipText}>
-                    {formatStopCount(journeyLocations.length)}
-                  </Text>
-                </View>
-
-                <View style={styles.metricChip}>
-                  <Text style={styles.metricChipText}>
-                    {normalizeCounty(journey.county)}
-                  </Text>
-                </View>
-
-                <View style={styles.metricChip}>
-                  <Text style={styles.metricChipText}>{categoryLabel}</Text>
-                </View>
-
-                <View style={styles.metricChip}>
-                  <Text style={styles.metricChipText}>
-                    {journey.notes} notes
-                  </Text>
-                </View>
+                {journeyTraits.map((trait) => (
+                  <View key={trait.id} style={styles.metricChip}>
+                    <Text style={styles.metricChipText}>{trait.name}</Text>
+                  </View>
+                ))}
               </View>
             </View>
 
@@ -383,6 +404,13 @@ export function JourneyDetailsScreen() {
           </>
         ) : null}
       </ScrollView>
+
+      <ContentNoteDialog
+        visible={isNoteDialogVisible}
+        title={`${screenTitle} note`}
+        note={journey?.notes}
+        onClose={() => setIsNoteDialogVisible(false)}
+      />
     </>
   );
 }
@@ -467,6 +495,34 @@ function formatDifficulty(difficulty: number | null | undefined) {
   }
 
   return Math.max(1, Math.round(Number(difficulty)));
+}
+
+function normalizeJourneyTraits(traits: JourneyTrait[] | undefined) {
+  if (!traits || traits.length === 0) {
+    return [];
+  }
+
+  return traits
+    .filter((trait) => typeof trait?.name === "string")
+    .map((trait, index) => ({
+      id:
+        typeof trait.id === "number" && Number.isFinite(trait.id)
+          ? trait.id
+          : -(index + 1),
+      name: trait.name.trim(),
+      sortOrder:
+        typeof trait.sortOrder === "number" && Number.isFinite(trait.sortOrder)
+          ? trait.sortOrder
+          : index,
+    }))
+    .filter((trait) => trait.name.length > 0)
+    .sort((left, right) => {
+      if (left.sortOrder !== right.sortOrder) {
+        return left.sortOrder - right.sortOrder;
+      }
+
+      return left.id - right.id;
+    });
 }
 
 type JourneyDetailsColors = ReturnType<typeof getJourneyDetailsColors>;
@@ -585,7 +641,9 @@ function createStyles(colors: JourneyDetailsColors) {
       textTransform: "uppercase",
     },
     heroCopy: {
+      position: "relative",
       padding: 20,
+      paddingRight: 84,
       gap: 8,
     },
     journeyTitle: {
@@ -603,6 +661,22 @@ function createStyles(colors: JourneyDetailsColors) {
       color: colors.subtle,
       fontSize: 14,
       fontWeight: "600",
+    },
+    heroInfoButton: {
+      position: "absolute",
+      right: 20,
+      bottom: 20,
+      width: 42,
+      height: 42,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.chipBackground,
+    },
+    heroInfoButtonPressed: {
+      opacity: 0.84,
     },
     detailsCard: {
       borderRadius: 24,

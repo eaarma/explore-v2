@@ -1,6 +1,15 @@
 import { apiClient } from "@/src/shared/api/apiClient";
 import { Location } from "@/src/features/locations/types/locationTypes";
 
+export type AdminLocationImageRequest = {
+  url: string;
+  storagePath?: string | null;
+};
+
+export type AdminLocationTraitRequest = {
+  name: string;
+};
+
 export type CreateAdminLocationRequest = {
   title: string;
   description?: string;
@@ -9,9 +18,12 @@ export type CreateAdminLocationRequest = {
   county?: string;
   category?: string;
   imageUrl?: string;
+  imageUrls?: string[];
+  images?: AdminLocationImageRequest[];
+  traits?: AdminLocationTraitRequest[];
   experience?: number;
   difficulty?: number;
-  notes?: number;
+  notes?: string;
   status?: number;
 };
 
@@ -23,9 +35,12 @@ export type UpdateAdminLocationRequest = {
   county?: string;
   category?: string;
   imageUrl?: string;
+  imageUrls?: string[];
+  images?: AdminLocationImageRequest[];
+  traits?: AdminLocationTraitRequest[];
   experience?: number;
   difficulty?: number;
-  notes?: number;
+  notes?: string;
   status?: number;
 };
 

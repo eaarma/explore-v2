@@ -13,6 +13,10 @@ type AppSettingsState = StoredAppSettings & {
   isHydrated: boolean;
   hydrate: () => Promise<void>;
   setAppearancePreference: (preference: AppAppearanceSetting) => Promise<void>;
+  setBrandingSettings: (branding: {
+    appTitle: string;
+    contactEmail: string;
+  }) => Promise<void>;
   setDefaultMapStyle: (mapStyle: MapStyleKey) => Promise<void>;
   setOfflineRoadMapEnabled: (enabled: boolean) => Promise<void>;
 };
@@ -55,6 +59,16 @@ export const useAppSettingsStore = create<AppSettingsState>((set, get) => ({
     await saveStoredAppSettings(getPersistedSettings(get()));
   },
 
+  setBrandingSettings: async (branding) => {
+    set({
+      appTitle: branding.appTitle,
+      contactEmail: branding.contactEmail,
+      isHydrated: true,
+    });
+
+    await saveStoredAppSettings(getPersistedSettings(get()));
+  },
+
   setDefaultMapStyle: async (defaultMapStyle) => {
     set({
       defaultMapStyle,
@@ -77,11 +91,17 @@ export const useAppSettingsStore = create<AppSettingsState>((set, get) => ({
 function getPersistedSettings(
   settings: Pick<
     AppSettingsState,
-    "appearancePreference" | "defaultMapStyle" | "offlineRoadMapEnabled"
+    | "appTitle"
+    | "appearancePreference"
+    | "contactEmail"
+    | "defaultMapStyle"
+    | "offlineRoadMapEnabled"
   >,
 ): StoredAppSettings {
   return {
+    appTitle: settings.appTitle,
     appearancePreference: settings.appearancePreference,
+    contactEmail: settings.contactEmail,
     defaultMapStyle: settings.defaultMapStyle,
     offlineRoadMapEnabled: settings.offlineRoadMapEnabled,
   };

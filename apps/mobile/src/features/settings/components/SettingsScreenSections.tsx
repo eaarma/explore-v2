@@ -7,6 +7,7 @@ import {
 } from "react-native";
 
 import { DEFAULT_OFFLINE_ROAD_MAP_LABEL } from "@/src/features/map/storage/defaultOfflineRoadMap";
+import { useAppSettingsStore } from "@/src/features/settings/store/appSettingsStore";
 import type {
   SettingsScreenColors,
   SettingsScreenStyles,
@@ -64,10 +65,14 @@ type SettingRowProps = SharedSectionProps & {
 export function SettingsHeroCard({
   styles,
 }: SharedSectionProps) {
+  const appTitle = useAppSettingsStore((state) => state.appTitle);
+
   return (
     <View style={styles.heroCard}>
       <Text style={styles.eyebrow}>Settings</Text>
-      <Text style={styles.heroTitle}>Tune how Explore feels before launch.</Text>
+      <Text style={styles.heroTitle}>
+        Tune how {appTitle} feels before launch.
+      </Text>
       <Text style={styles.heroCopy}>
         Theme, map defaults, and the offline Estonia road pack are all live in
         this MVP build.

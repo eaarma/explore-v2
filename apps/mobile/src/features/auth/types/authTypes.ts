@@ -22,6 +22,8 @@ export type RegisterRequest = {
   email: string;
   name: string;
   password: string;
+  privacyPolicyAccepted: boolean;
+  termsAccepted: boolean;
 };
 
 export type AuthResponse = {

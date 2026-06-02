@@ -1,5 +1,7 @@
 package com.explore.app.journeys.model;
 
+import com.explore.app.shared.BadRequestException;
+
 public enum JourneyStatus {
     ACTIVE(1),
     INACTIVE(0);
@@ -26,6 +28,6 @@ public enum JourneyStatus {
             }
         }
 
-        return ACTIVE;
+        throw new BadRequestException("Invalid journey status code: " + code);
     }
 }

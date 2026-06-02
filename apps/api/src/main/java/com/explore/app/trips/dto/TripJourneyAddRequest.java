@@ -1,5 +1,7 @@
 package com.explore.app.trips.dto;
 
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,5 +13,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class TripJourneyAddRequest {
 
+    @NotNull
+    @Positive
     private Long journeyId;
 }

@@ -6,7 +6,10 @@ import { getActiveJourneys } from "@/src/features/journeys/api/journeysApi";
 import type { Journey } from "@/src/features/journeys/types/journeyTypes";
 import { getActiveLocations } from "@/src/features/locations/api/locationsApi";
 import type { Location } from "@/src/features/locations/types/locationTypes";
-import { hasValidCoordinates } from "@/src/features/map/utils/mapFeatureCollection";
+import {
+  coerceCoordinate,
+  hasValidCoordinates,
+} from "@/src/features/map/utils/mapFeatureCollection";
 import { cacheActiveContent } from "@/src/shared/storage/contentCache";
 
 export async function loadLiveMapData() {
@@ -17,11 +20,11 @@ export async function loadLiveMapData() {
 
   const locations =
     locationsResult.status === "fulfilled"
-      ? locationsResult.value.filter(hasValidCoordinates)
+      ? normalizeMapPoints(locationsResult.value).filter(hasValidCoordinates)
       : [];
   const journeys =
     journeysResult.status === "fulfilled"
-      ? journeysResult.value.filter(hasValidCoordinates)
+      ? normalizeMapPoints(journeysResult.value).filter(hasValidCoordinates)
       : [];
 
   if (
@@ -57,8 +60,8 @@ export async function hydrateMapContent(
   ]);
 
   return {
-    locations: hydratedLocations,
-    journeys: hydratedJourneys,
+    locations: normalizeMapPoints(hydratedLocations).filter(hasValidCoordinates),
+    journeys: normalizeMapPoints(hydratedJourneys).filter(hasValidCoordinates),
   };
 }
 
@@ -86,4 +89,22 @@ export function resolveVisibleMapDataError(
   }
 
   return null;
+}
+
+function normalizeMapPoints<
+  T extends {
+    latitude: number | string | null | undefined;
+    longitude: number | string | null | undefined;
+  },
+>(points: T[]) {
+  return points.map((point) => {
+    const latitude = coerceCoordinate(point.latitude);
+    const longitude = coerceCoordinate(point.longitude);
+
+    return {
+      ...point,
+      latitude: latitude ?? point.latitude,
+      longitude: longitude ?? point.longitude,
+    };
+  }) as T[];
 }

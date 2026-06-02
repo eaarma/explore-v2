@@ -3,15 +3,19 @@ package com.explore.app.journeys.service;
 import com.explore.app.journeys.mapper.JourneyLocationMapper;
 import com.explore.app.journeys.model.Journey;
 import com.explore.app.journeys.model.JourneyLocation;
+import com.explore.app.journeys.model.JourneyStatus;
 import com.explore.app.journeys.repository.JourneyLocationRepository;
 import com.explore.app.journeys.repository.JourneyRepository;
 import com.explore.app.journeys.dto.JourneyLocationOrderRequest;
 import com.explore.app.journeys.dto.JourneyLocationResponse;
 import com.explore.app.locations.model.Location;
+import com.explore.app.locations.model.LocationStatus;
 import com.explore.app.locations.repository.LocationRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashSet;
 import java.util.List;
@@ -29,6 +33,16 @@ public class JourneyLocationService {
     private final LocationRepository locationRepository;
     private final JourneyLocationRepository journeyLocationRepository;
     private final JourneyLocationMapper journeyLocationMapper;
+
+    public List<JourneyLocationResponse> getPublicLocationsForJourney(Long journeyId) {
+        findActiveJourney(journeyId);
+
+        return journeyLocationRepository
+                .findByJourneyIdAndLocationStatusOrderBySortOrderAsc(journeyId, LocationStatus.ACTIVE)
+                .stream()
+                .map(journeyLocationMapper::toResponse)
+                .toList();
+    }
 
     public List<JourneyLocationResponse> getLocationsForJourney(Long journeyId) {
         findJourney(journeyId);
@@ -113,6 +127,11 @@ public class JourneyLocationService {
     private Journey findJourney(Long journeyId) {
         return journeyRepository.findById(journeyId)
                 .orElseThrow(() -> new IllegalArgumentException("Journey not found"));
+    }
+
+    private Journey findActiveJourney(Long journeyId) {
+        return journeyRepository.findByIdAndStatus(journeyId, JourneyStatus.ACTIVE)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Journey not found"));
     }
 
     private Location findLocation(Long locationId) {

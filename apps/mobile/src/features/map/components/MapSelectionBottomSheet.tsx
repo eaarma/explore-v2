@@ -488,7 +488,6 @@ function getMetricLabels(
       getLocationVisitStatusLabel(selection.item),
       `Difficulty ${formatDifficulty(selection.item.difficulty)}`,
       `Experience ${formatCount(selection.item.experience)}`,
-      formatNotesLabel(selection.item.notes),
     ].filter(Boolean);
   }
 
@@ -497,7 +496,6 @@ function getMetricLabels(
     getJourneyCompletionStatusLabel(selection.item),
     formatDistanceLabel(selection.item.distance),
     `Difficulty ${formatDifficulty(selection.item.difficulty)}`,
-    formatNotesLabel(selection.item.notes),
   ].filter(Boolean);
 }
 
@@ -539,20 +537,6 @@ function formatDistanceLabel(distanceKm: number | null | undefined) {
   }
 
   return `${Math.round(numericDistance)} km route`;
-}
-
-function formatNotesLabel(notes: number | null | undefined) {
-  if (!Number.isFinite(notes)) {
-    return "Notes unavailable";
-  }
-
-  const numericNotes = Math.max(0, Math.round(Number(notes)));
-
-  if (numericNotes === 1) {
-    return "1 note";
-  }
-
-  return `${numericNotes} notes`;
 }
 
 function capitalize(value: string) {

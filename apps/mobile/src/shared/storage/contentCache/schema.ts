@@ -1,5 +1,5 @@
 export const DATABASE_NAME = "explore-content.db";
-export const CONTENT_CACHE_SCHEMA_VERSION = 3;
+export const CONTENT_CACHE_SCHEMA_VERSION = 7;
 
 export function getCreateSyncMetadataTableSql(ifNotExists = "") {
   return `
@@ -21,9 +21,11 @@ export function getCreateLocationsTableSql(ifNotExists = "") {
       county TEXT,
       category TEXT,
       imageUrl TEXT,
+      imageUrls TEXT,
+      traits TEXT,
       experience INTEGER,
       difficulty INTEGER,
-      notes INTEGER,
+      notes TEXT,
       status INTEGER,
       createdAt TEXT,
       updatedAt TEXT
@@ -45,7 +47,8 @@ export function getCreateJourneysTableSql(ifNotExists = "") {
       distance REAL,
       difficulty INTEGER,
       polyline TEXT,
-      notes INTEGER,
+      traits TEXT,
+      notes TEXT,
       status INTEGER,
       createdAt TEXT,
       updatedAt TEXT
@@ -68,7 +71,7 @@ export function getCreateJourneyLocationsTableSql(ifNotExists = "") {
       imageUrl TEXT,
       experience INTEGER,
       difficulty INTEGER,
-      notes INTEGER,
+      notes TEXT,
       status INTEGER,
       sortOrder INTEGER,
       FOREIGN KEY (journeyId) REFERENCES journeys(id) ON DELETE CASCADE

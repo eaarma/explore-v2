@@ -20,12 +20,12 @@ public class PublicLocationController {
 
     @GetMapping
     public List<LocationResponse> getAllLocations() {
-        return locationService.getAllLocations();
+        return locationService.getPublicLocations();
     }
 
     @GetMapping("/{id}")
     public LocationResponse getLocationById(@PathVariable("id") Long id) {
-        return locationService.getLocationById(id);
+        return locationService.getPublicLocationById(id);
     }
 
     @GetMapping("/active")
@@ -35,12 +35,12 @@ public class PublicLocationController {
 
     @GetMapping("/category/{category}")
     public List<LocationResponse> getLocationsByCategory(@PathVariable("category") String category) {
-        return locationService.getLocationsByCategory(category);
+        return locationService.getPublicLocationsByCategory(category);
     }
 
     @GetMapping("/county/{county}")
     public List<LocationResponse> getLocationsByCounty(@PathVariable("county") String county) {
-        return locationService.getLocationsByCounty(county);
+        return locationService.getPublicLocationsByCounty(county);
     }
 
     @GetMapping("/nearby")
@@ -48,7 +48,7 @@ public class PublicLocationController {
             @RequestParam("latitude") double latitude,
             @RequestParam("longitude") double longitude,
             @RequestParam("radiusMeters") double radiusMeters) {
-        return locationService.getNearbyLocations(latitude, longitude, radiusMeters);
+        return locationService.getPublicNearbyLocations(latitude, longitude, radiusMeters);
     }
 }
 

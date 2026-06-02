@@ -70,6 +70,7 @@ export function useMapLocationPermission() {
   return {
     currentPosition,
     ensureLocationPermission,
+    latestPosition: rawCurrentPosition ?? currentPosition,
     locationPermissionGranted,
   };
 }

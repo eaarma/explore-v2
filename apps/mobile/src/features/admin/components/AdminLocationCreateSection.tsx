@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import {
-  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -30,8 +29,10 @@ import { DEFAULT_MAP_CENTER } from "@/src/features/map/mapConfig";
 import { normalizeCategory } from "@/src/features/locations/components/locationsSectionShared";
 import { type Location } from "@/src/features/locations/types/locationTypes";
 import { CategoryImagePlaceholder } from "@/src/shared/components/CategoryImagePlaceholder";
+import { InlineFeedbackCard } from "@/src/shared/components/InlineFeedbackCard";
 import { getApiErrorMessage } from "@/src/shared/api/apiError";
 import { useColorScheme } from "@/src/shared/hooks/use-color-scheme";
+import { showAppToast } from "@/src/shared/store/appFeedbackStore";
 import { useAppSettingsStore } from "@/src/features/settings/store/appSettingsStore";
 import {
   cacheActiveContent,
@@ -83,7 +84,7 @@ const INITIAL_CREATE_DRAFT: LocationCreateDraft = {
   status: "1",
   difficulty: "0",
   experience: "0",
-  notes: "0",
+  notes: "",
   imageUrl: "",
 };
 
@@ -101,6 +102,7 @@ export function AdminLocationCreateSection() {
   const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
   const [isMapPickerOpen, setIsMapPickerOpen] = useState(false);
   const [draft, setDraft] = useState<LocationCreateDraft>(INITIAL_CREATE_DRAFT);
+  const [formError, setFormError] = useState<string | null>(null);
   const categoryLabel = normalizeCategory(draft.category);
   const publicationStatusLabel = getPublicationStatusLabel(Number(draft.status));
   const currentImageUrl = toNullableImageUrl(draft.imageUrl);
@@ -113,6 +115,7 @@ export function AdminLocationCreateSection() {
       ...currentDraft,
       [field]: value,
     }));
+    setFormError(null);
   }
 
   function clearForm() {
@@ -124,6 +127,7 @@ export function AdminLocationCreateSection() {
     setIsCategoryMenuOpen(false);
     setIsStatusMenuOpen(false);
     setIsMapPickerOpen(false);
+    setFormError(null);
   }
 
   function openMapPicker() {
@@ -142,11 +146,12 @@ export function AdminLocationCreateSection() {
     const payload = buildCreateLocationPayload(draft);
 
     if (!payload.success) {
-      Alert.alert("Invalid fields", payload.message);
+      setFormError(payload.message);
       return;
     }
 
     setIsSaving(true);
+    setFormError(null);
 
     try {
       const createdLocation = await createAdminLocation(payload.value);
@@ -185,13 +190,13 @@ export function AdminLocationCreateSection() {
         },
       });
     } catch (error) {
-      Alert.alert(
-        "Create failed",
-        getApiErrorMessage(
+      showAppToast({
+        text: getApiErrorMessage(
           error,
           "Could not create the location right now.",
         ),
-      );
+        tone: "error",
+      });
     } finally {
       setIsSaving(false);
     }
@@ -243,9 +248,6 @@ export function AdminLocationCreateSection() {
                 <Text style={styles.metricChipText}>
                   Experience {draft.experience}
                 </Text>
-              </View>
-              <View style={styles.metricChip}>
-                <Text style={styles.metricChipText}>{draft.notes} notes</Text>
               </View>
             </View>
           </View>
@@ -358,12 +360,12 @@ export function AdminLocationCreateSection() {
             keyboardType="number-pad"
           />
           <EditableField
-            label="Notes count"
+            label="Note"
             value={draft.notes}
             onChangeText={(value) => updateDraft("notes", value)}
             styles={styles}
             placeholderTextColor={themeColors.inputPlaceholder}
-            keyboardType="number-pad"
+            multiline
           />
           <EditableField
             label="Image URL"
@@ -375,6 +377,8 @@ export function AdminLocationCreateSection() {
             keyboardType="url"
           />
         </View>
+
+        {formError ? <InlineFeedbackCard message={formError} /> : null}
 
         <View style={styles.actionRow}>
           <Pressable
@@ -769,11 +773,6 @@ function buildCreateLocationPayload(
     return experience;
   }
 
-  const notes = parseRequiredInteger(draft.notes, "Notes count");
-  if (!notes.success) {
-    return notes;
-  }
-
   return {
     success: true,
     value: {
@@ -786,7 +785,7 @@ function buildCreateLocationPayload(
       imageUrl: draft.imageUrl,
       experience: experience.value,
       difficulty: difficulty.value,
-      notes: notes.value,
+      notes: draft.notes,
       status: status.value,
     },
   };

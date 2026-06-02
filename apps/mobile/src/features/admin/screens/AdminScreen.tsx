@@ -14,7 +14,11 @@ import { useColorScheme } from "@/src/shared/hooks/use-color-scheme";
 const ADMIN_MENU_OPTIONS: {
   label: string;
   description: string;
-  href: "/admin-locations" | "/admin-journeys" | "/admin-users";
+  href:
+    | "/admin-locations"
+    | "/admin-journeys"
+    | "/admin-users"
+    | "/admin-customize";
 }[] = [
   {
     label: "Locations",
@@ -30,6 +34,11 @@ const ADMIN_MENU_OPTIONS: {
     label: "Users",
     description: "Browse accounts, roles, and statuses.",
     href: "/admin-users",
+  },
+  {
+    label: "Customize",
+    description: "Manage legal copy and other app-facing text settings.",
+    href: "/admin-customize",
   },
 ];
 

@@ -35,7 +35,20 @@ function normalizeApiBaseUrl(url: string) {
   return `${trimmedUrl}/api`;
 }
 
-export const API_BASE_URL =
-  normalizeApiBaseUrl(
-    process.env.EXPO_PUBLIC_API_URL?.trim() || getDefaultApiBaseUrl(),
+function resolveApiBaseUrl() {
+  const configuredApiBaseUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
+
+  if (configuredApiBaseUrl) {
+    return normalizeApiBaseUrl(configuredApiBaseUrl);
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    return normalizeApiBaseUrl(getDefaultApiBaseUrl());
+  }
+
+  throw new Error(
+    "EXPO_PUBLIC_API_URL must be set for non-development builds.",
   );
+}
+
+export const API_BASE_URL = resolveApiBaseUrl();

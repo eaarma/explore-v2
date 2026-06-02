@@ -1,5 +1,11 @@
 import { JourneyLocation } from "@/src/features/journeys/types/journeyLocationTypes";
 
+export type JourneyTrait = {
+  id: number;
+  name: string;
+  sortOrder: number;
+};
+
 export type Journey = {
   id: number;
   title: string;
@@ -12,7 +18,8 @@ export type Journey = {
   distance: number;
   difficulty: number;
   polyline: string | null;
-  notes: number;
+  traits?: JourneyTrait[];
+  notes: string | null;
   status: number;
   createdAt: string;
   updatedAt: string;

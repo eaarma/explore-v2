@@ -51,11 +51,17 @@ public class Location {
     @Builder.Default
     private List<LocationImage> images = new ArrayList<>();
 
+    @OneToMany(mappedBy = "location", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("sortOrder ASC, id ASC")
+    @Builder.Default
+    private List<LocationTrait> traits = new ArrayList<>();
+
     private Integer experience;
 
     private Integer difficulty;
 
-    private Integer notes;
+    @Column(columnDefinition = "TEXT")
+    private String notes;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

@@ -23,7 +23,7 @@ public class JourneyLocationResponse {
     private String imageUrl;
     private Integer experience;
     private Integer difficulty;
-    private Integer notes;
+    private String notes;
     private Integer status;
     private Integer sortOrder;
 }
