@@ -59,6 +59,8 @@ public class LegacyDataImporter implements ApplicationRunner {
         importLocations(data.locations());
         importJourneys(data.journeys());
         importJourneyLocations(data.journeys());
+        syncIdentitySequence("locations");
+        syncIdentitySequence("journeys");
     }
 
     private void importLocations(List<LegacyLocation> legacyLocations) {
@@ -272,6 +274,18 @@ public class LegacyDataImporter implements ApplicationRunner {
         }
 
         return JourneyStatus.ACTIVE;
+    }
+
+    private void syncIdentitySequence(String tableName) {
+        // Legacy imports provide explicit IDs, so PostgreSQL will not advance the identity sequence for us.
+        entityManager.createNativeQuery("""
+                SELECT setval(
+                    pg_get_serial_sequence('%s', 'id'),
+                    COALESCE((SELECT MAX(id) FROM %s), 0) + 1,
+                    false
+                )
+                """.formatted(tableName, tableName))
+                .getSingleResult();
     }
 
 }
