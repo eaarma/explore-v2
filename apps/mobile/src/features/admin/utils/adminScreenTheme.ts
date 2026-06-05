@@ -1,3 +1,8 @@
+import {
+  ACTIVE_STATE_ACCENT,
+  getActiveStateColors,
+} from "@/src/shared/constants/activeStateColors";
+
 export type AdminColors = {
   background: string;
   card: string;
@@ -11,14 +16,16 @@ export type AdminColors = {
 };
 
 export function getAdminScreenColors(isDark: boolean): AdminColors {
+  const activeStateColors = getActiveStateColors(isDark);
+
   return {
     background: isDark ? "#020617" : "#F8FAFC",
     card: isDark ? "#0F172A" : "#FFFFFF",
     cardBorder: isDark ? "#1E293B" : "#E2E8F0",
     title: isDark ? "#F8FAFC" : "#0F172A",
     body: isDark ? "#CBD5E1" : "#475569",
-    accent: isDark ? "#5EEAD4" : "#0F766E",
-    subtleAccent: isDark ? "#0B2530" : "#ECFDF5",
+    accent: ACTIVE_STATE_ACCENT,
+    subtleAccent: activeStateColors.softBackground,
     menuBackground: isDark ? "#111827" : "#FFFFFF",
     menuText: isDark ? "#CBD5E1" : "#334155",
   };

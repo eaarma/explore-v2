@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useLogoutFlow } from "@/src/features/auth/hooks/useLogoutFlow";
 import { useAuthStore } from "@/src/features/auth/store/authStore";
+import { ACTIVE_STATE_ACCENT } from "@/src/shared/constants/activeStateColors";
 import { useColorScheme } from "@/src/shared/hooks/use-color-scheme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { UnsyncedLogoutModal } from "@/src/shared/components/UnsyncedLogoutModal";
@@ -54,7 +55,7 @@ export function HeaderMoreMenu() {
     }
   }
 
-  const triggerIconColor = colorScheme === "dark" ? "#5EEAD4" : "#2563EB";
+  const triggerIconColor = ACTIVE_STATE_ACCENT;
   const menuBackgroundColor = colorScheme === "dark" ? "#0F172A" : "#FFFFFF";
   const menuItemTextColor = colorScheme === "dark" ? "#F8FAFC" : "#0F172A";
   const pressedBackgroundColor =

@@ -20,6 +20,10 @@ import { normalizeCategory as normalizeJourneyCategory } from "@/src/features/jo
 import { normalizeCategory as normalizeLocationCategory } from "@/src/features/locations/components/locationsSectionShared";
 import type { Journey } from "@/src/features/journeys/types/journeyTypes";
 import type { Location } from "@/src/features/locations/types/locationTypes";
+import {
+  ACTIVE_STATE_ACCENT,
+  getActiveStateColors,
+} from "@/src/shared/constants/activeStateColors";
 import { useColorScheme } from "@/src/shared/hooks/use-color-scheme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -58,6 +62,10 @@ export function MapSelectionBottomSheet({
 }: MapSelectionBottomSheetProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const activeStateColors = useMemo(
+    () => getActiveStateColors(isDark),
+    [isDark],
+  );
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const [headerHeight, setHeaderHeight] = useState(DEFAULT_COLLAPSED_HEIGHT);
@@ -182,12 +190,14 @@ export function MapSelectionBottomSheet({
         activeToggleActiveBackground: "#422006",
         activeToggleIcon: "#CBD5E1",
         activeToggleActiveIcon: "#FDE68A",
-        summaryLabel: "#5EEAD4",
+        summaryLabel: ACTIVE_STATE_ACCENT,
         title: "#F8FAFC",
         metricChipBackground: "#111827",
         metricChipText: "#E2E8F0",
         sectionLabel: "#94A3B8",
         description: "#CBD5E1",
+        primaryButtonBackground: activeStateColors.buttonBackground,
+        primaryButtonText: activeStateColors.text,
         secondaryButtonBorder: "#334155",
         secondaryButtonBackground: "#111827",
         secondaryButtonText: "#E2E8F0",
@@ -204,12 +214,14 @@ export function MapSelectionBottomSheet({
         activeToggleActiveBackground: "#FEF3C7",
         activeToggleIcon: "#334155",
         activeToggleActiveIcon: "#92400E",
-        summaryLabel: "#0F766E",
+        summaryLabel: ACTIVE_STATE_ACCENT,
         title: "#0F172A",
         metricChipBackground: "#F1F5F9",
         metricChipText: "#334155",
         sectionLabel: "#475569",
         description: "#334155",
+        primaryButtonBackground: activeStateColors.buttonBackground,
+        primaryButtonText: activeStateColors.text,
         secondaryButtonBorder: "#CBD5E1",
         secondaryButtonBackground: "#FFFFFF",
         secondaryButtonText: "#334155",
@@ -361,12 +373,17 @@ export function MapSelectionBottomSheet({
           <View style={styles.actionRow}>
             <Pressable
               onPress={() => onOpenDetails(selection)}
-              style={[styles.actionButton, styles.primaryActionButton]}
+              style={[
+                styles.actionButton,
+                {
+                  backgroundColor: sheetColors.primaryButtonBackground,
+                },
+              ]}
             >
               <Text
                 style={[
                   styles.actionButtonText,
-                  styles.primaryActionButtonText,
+                  { color: sheetColors.primaryButtonText },
                 ]}
               >
                 View details
@@ -624,7 +641,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   summaryLabel: {
-    color: "#0F766E",
+    color: ACTIVE_STATE_ACCENT,
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 0.4,
@@ -686,9 +703,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
-  primaryActionButton: {
-    backgroundColor: "#0F766E",
-  },
   secondaryActionButton: {
     borderWidth: 1,
     borderColor: "#CBD5E1",
@@ -697,9 +711,6 @@ const styles = StyleSheet.create({
   actionButtonText: {
     fontSize: 14,
     fontWeight: "700",
-  },
-  primaryActionButtonText: {
-    color: "#FFFFFF",
   },
   secondaryActionButtonText: {
     color: "#334155",

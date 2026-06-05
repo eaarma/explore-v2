@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { StyleSheet } from "react-native";
 
 import { useColorScheme } from "@/src/shared/hooks/use-color-scheme";
+import { getActiveStateColors } from "@/src/shared/constants/activeStateColors";
 import { Location } from "@/src/features/locations/types/locationTypes";
 
 export type NearbyMode = "radius" | "browse";
@@ -85,6 +86,8 @@ export function useLocationSectionStyles() {
 }
 
 function getLocationSectionColors(isDark: boolean) {
+  const activeStateColors = getActiveStateColors(isDark);
+
   if (isDark) {
     return {
       searchInputBorder: "#334155",
@@ -96,23 +99,25 @@ function getLocationSectionColors(isDark: boolean) {
       controlLabel: "#94A3B8",
       segmentedBorder: "#334155",
       segmentedBackground: "#0F172A",
-      segmentedActiveBorder: "#2DD4BF",
-      segmentedActiveBackground: "#134E4A",
+      segmentedActiveBorder: activeStateColors.border,
+      segmentedActiveBackground: activeStateColors.selectionBackground,
       segmentedText: "#E2E8F0",
-      segmentedActiveText: "#CCFBF1",
+      segmentedActiveText: activeStateColors.text,
       chipBorder: "#334155",
       chipBackground: "#0F172A",
-      chipActiveBorder: "#2DD4BF",
-      chipActiveBackground: "#115E59",
+      chipActiveBorder: activeStateColors.border,
+      chipActiveBackground: activeStateColors.selectionBackground,
       chipText: "#E2E8F0",
-      chipActiveText: "#FFFFFF",
+      chipActiveText: activeStateColors.text,
+      primaryActionBackground: activeStateColors.buttonBackground,
+      primaryActionText: activeStateColors.text,
       stateBorder: "#1E293B",
       stateBackground: "#0F172A",
       stateTitle: "#F8FAFC",
       stateCopy: "#CBD5E1",
       sectionBackground: "#0F172A",
       sectionTitle: "#F8FAFC",
-      sectionMeta: "#5EEAD4",
+      sectionMeta: activeStateColors.tint,
       sectionHint: "#94A3B8",
       emptyCopy: "#CBD5E1",
       cardBackground: "#0F172A",
@@ -136,11 +141,11 @@ function getLocationSectionColors(isDark: boolean) {
       bodyText: "#E2E8F0",
       tertiaryText: "#CBD5E1",
       thumbnailBackground: "#1E293B",
-      imagePlaceholderBackground: "#123B36",
-      imagePlaceholderText: "#99F6E4",
+      imagePlaceholderBackground: activeStateColors.softBackground,
+      imagePlaceholderText: activeStateColors.tint,
       dividerBorder: "#1E293B",
-      categoryBadgeBackground: "#134E4A",
-      categoryBadgeText: "#99F6E4",
+      categoryBadgeBackground: activeStateColors.softBackground,
+      categoryBadgeText: activeStateColors.tint,
       metricChipBackground: "#111827",
       metricChipText: "#E2E8F0",
       secondaryButtonBorder: "#334155",
@@ -148,7 +153,7 @@ function getLocationSectionColors(isDark: boolean) {
       secondaryButtonText: "#E2E8F0",
       regionCardBackground: "#0F172A",
       regionCardBorder: "#1E293B",
-      regionToggle: "#5EEAD4",
+      regionToggle: activeStateColors.tint,
       regionRowBackground: "#111827",
     };
   }
@@ -163,23 +168,25 @@ function getLocationSectionColors(isDark: boolean) {
     controlLabel: "#475569",
     segmentedBorder: "#D5D0C5",
     segmentedBackground: "#FEFCF8",
-    segmentedActiveBorder: "#0F766E",
-    segmentedActiveBackground: "#CCFBF1",
+    segmentedActiveBorder: activeStateColors.border,
+    segmentedActiveBackground: activeStateColors.background,
     segmentedText: "#334155",
-    segmentedActiveText: "#115E59",
+    segmentedActiveText: activeStateColors.text,
     chipBorder: "#D5D0C5",
     chipBackground: "#FEFCF8",
-    chipActiveBorder: "#0F766E",
-    chipActiveBackground: "#0F766E",
+    chipActiveBorder: activeStateColors.border,
+    chipActiveBackground: activeStateColors.background,
     chipText: "#334155",
-    chipActiveText: "#FFFFFF",
+    chipActiveText: activeStateColors.text,
+    primaryActionBackground: activeStateColors.background,
+    primaryActionText: activeStateColors.text,
     stateBorder: "#CFE6E2",
     stateBackground: "#FEFCF8",
     stateTitle: "#0F172A",
     stateCopy: "#475569",
     sectionBackground: "#FEFCF8",
     sectionTitle: "#0F172A",
-    sectionMeta: "#0F766E",
+    sectionMeta: activeStateColors.tint,
     sectionHint: "#64748B",
     emptyCopy: "#475569",
     cardBackground: "#FFFFFF",
@@ -203,11 +210,11 @@ function getLocationSectionColors(isDark: boolean) {
     bodyText: "#334155",
     tertiaryText: "#475569",
     thumbnailBackground: "#E2E8F0",
-    imagePlaceholderBackground: "#D7EFEA",
-    imagePlaceholderText: "#115E59",
+    imagePlaceholderBackground: activeStateColors.softBackground,
+    imagePlaceholderText: activeStateColors.tint,
     dividerBorder: "#E7E1D7",
-    categoryBadgeBackground: "#D1FAE5",
-    categoryBadgeText: "#065F46",
+    categoryBadgeBackground: activeStateColors.softBackground,
+    categoryBadgeText: activeStateColors.tint,
     metricChipBackground: "#F1F5F9",
     metricChipText: "#334155",
     secondaryButtonBorder: "#CBD5E1",
@@ -215,7 +222,7 @@ function getLocationSectionColors(isDark: boolean) {
     secondaryButtonText: "#334155",
     regionCardBackground: "#FFFFFF",
     regionCardBorder: "#E7E1D7",
-    regionToggle: "#0F766E",
+    regionToggle: activeStateColors.tint,
     regionRowBackground: "#FAF7F1",
   };
 }
@@ -588,7 +595,7 @@ function createStyles(colors: LocationSectionColors) {
       paddingHorizontal: 14,
     },
     locationActionButtonPrimary: {
-      backgroundColor: colors.chipActiveBackground,
+      backgroundColor: colors.primaryActionBackground,
     },
     locationActionButtonSecondary: {
       borderWidth: 1,
@@ -603,7 +610,7 @@ function createStyles(colors: LocationSectionColors) {
       fontWeight: "700",
     },
     locationActionButtonTextPrimary: {
-      color: colors.chipActiveText,
+      color: colors.primaryActionText,
     },
     locationActionButtonTextSecondary: {
       color: colors.secondaryButtonText,

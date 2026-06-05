@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { StyleSheet } from "react-native";
 
+import { ACTIVE_STATE_ACCENT } from "@/src/shared/constants/activeStateColors";
 import { useColorScheme } from "@/src/shared/hooks/use-color-scheme";
 
 export type ProfileScreenColors = ReturnType<typeof getProfileScreenColors>;
@@ -24,7 +25,7 @@ function getProfileScreenColors(isDark: boolean) {
   if (isDark) {
     return {
       background: "#020617",
-      pageEyebrow: "#5EEAD4",
+      pageEyebrow: ACTIVE_STATE_ACCENT,
       title: "#F8FAFC",
       body: "#CBD5E1",
       muted: "#94A3B8",
@@ -35,7 +36,7 @@ function getProfileScreenColors(isDark: boolean) {
       feedbackText: "#F8FAFC",
       cardBackground: "#0F172A",
       cardShadow: "#020617",
-      cardEyebrow: "#5EEAD4",
+      cardEyebrow: ACTIVE_STATE_ACCENT,
       sessionBadgeOnlineBackground: "#134E4A",
       sessionBadgeOfflineBackground: "#422006",
       sessionDotOnline: "#2DD4BF",
@@ -63,7 +64,7 @@ function getProfileScreenColors(isDark: boolean) {
 
   return {
     background: "#F4EFE6",
-    pageEyebrow: "#0F766E",
+    pageEyebrow: ACTIVE_STATE_ACCENT,
     title: "#0F172A",
     body: "#475569",
     muted: "#64748B",
@@ -74,7 +75,7 @@ function getProfileScreenColors(isDark: boolean) {
     feedbackText: "#0F172A",
     cardBackground: "#FEFCF8",
     cardShadow: "#1E293B",
-    cardEyebrow: "#0F766E",
+    cardEyebrow: ACTIVE_STATE_ACCENT,
     sessionBadgeOnlineBackground: "#CCFBF1",
     sessionBadgeOfflineBackground: "#FEF3C7",
     sessionDotOnline: "#0F766E",

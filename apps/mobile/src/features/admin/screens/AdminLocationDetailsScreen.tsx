@@ -37,6 +37,7 @@ import {
 } from "@/src/features/locations/types/locationTypes";
 import { getApiErrorMessage } from "@/src/shared/api/apiError";
 import { InlineFeedbackCard } from "@/src/shared/components/InlineFeedbackCard";
+import { ACTIVE_STATE_ACCENT } from "@/src/shared/constants/activeStateColors";
 import { useColorScheme } from "@/src/shared/hooks/use-color-scheme";
 import { showAppToast } from "@/src/shared/store/appFeedbackStore";
 import {
@@ -1343,7 +1344,7 @@ function getAdminLocationDetailsColors(isDark: boolean) {
       border: "#1E293B",
       title: "#F8FAFC",
       body: "#CBD5E1",
-      accent: "#5EEAD4",
+      accent: ACTIVE_STATE_ACCENT,
       muted: "#94A3B8",
       inputBackground: "#111827",
       inputBorder: "#334155",
@@ -1368,7 +1369,7 @@ function getAdminLocationDetailsColors(isDark: boolean) {
     border: "#E2E8F0",
     title: "#0F172A",
     body: "#475569",
-    accent: "#0F766E",
+    accent: ACTIVE_STATE_ACCENT,
     muted: "#64748B",
     inputBackground: "#FFFFFF",
     inputBorder: "#CBD5E1",

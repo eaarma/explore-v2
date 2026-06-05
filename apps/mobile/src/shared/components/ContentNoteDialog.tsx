@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
+import { getActiveStateColors } from "@/src/shared/constants/activeStateColors";
 import { useColorScheme } from "@/src/shared/hooks/use-color-scheme";
 
 type ContentNoteDialogProps = {
@@ -82,6 +83,8 @@ function getNormalizedNoteBody(note: unknown) {
 }
 
 function getContentNoteDialogColors(isDark: boolean) {
+  const activeStateColors = getActiveStateColors(isDark);
+
   if (isDark) {
     return {
       backdrop: "rgba(2, 6, 23, 0.7)",
@@ -89,9 +92,9 @@ function getContentNoteDialogColors(isDark: boolean) {
       border: "#1E293B",
       title: "#F8FAFC",
       body: "#CBD5E1",
-      accent: "#5EEAD4",
-      buttonBackground: "#115E59",
-      buttonText: "#FFFFFF",
+      accent: activeStateColors.tint,
+      buttonBackground: activeStateColors.buttonBackground,
+      buttonText: activeStateColors.text,
     };
   }
 
@@ -101,9 +104,9 @@ function getContentNoteDialogColors(isDark: boolean) {
     border: "#E7E1D7",
     title: "#0F172A",
     body: "#475569",
-    accent: "#0F766E",
-    buttonBackground: "#0F766E",
-    buttonText: "#FFFFFF",
+    accent: activeStateColors.tint,
+    buttonBackground: activeStateColors.buttonBackground,
+    buttonText: activeStateColors.text,
   };
 }
 

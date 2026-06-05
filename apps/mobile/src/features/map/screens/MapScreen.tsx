@@ -62,6 +62,7 @@ import {
   DEFAULT_MAP_CENTER,
   type MapOverlayKey,
 } from "@/src/features/map/mapConfig";
+import { getActiveStateColors } from "@/src/shared/constants/activeStateColors";
 
 export function MapScreen() {
   const navigation = useNavigation();
@@ -69,6 +70,10 @@ export function MapScreen() {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const activeStateColors = useMemo(
+    () => getActiveStateColors(isDark),
+    [isDark],
+  );
   const authStatus = useAuthStore((state) => state.status);
   const authUser = useAuthStore((state) => state.user);
   const markDiscoveryProgressUpdated = useDiscoveryProgressStore(
@@ -233,13 +238,13 @@ export function MapScreen() {
         ? {
             toolButtonBackground: "rgba(15, 23, 42, 0.96)",
             toolButtonBorder: "#334155",
-            toolButtonActiveBackground: "#115E59",
-            toolButtonActiveBorder: "#2DD4BF",
+            toolButtonActiveBackground: activeStateColors.selectionBackground,
+            toolButtonActiveBorder: activeStateColors.border,
             toolButtonIcon: "#E2E8F0",
-            toolButtonActiveIcon: "#FFFFFF",
+            toolButtonActiveIcon: activeStateColors.text,
             toolPanelBackground: "rgba(15, 23, 42, 0.98)",
             toolPanelBorder: "#1E293B",
-            toolPanelEyebrow: "#5EEAD4",
+            toolPanelEyebrow: activeStateColors.tint,
             toolPanelHint: "#CBD5E1",
             searchInputBackground: "#111827",
             searchInputBorder: "#334155",
@@ -248,11 +253,11 @@ export function MapScreen() {
             searchCloseIcon: "#CBD5E1",
             toolOptionBackground: "#111827",
             toolOptionBorder: "#334155",
-            toolOptionActiveBackground: "#134E4A",
-            toolOptionActiveBorder: "#2DD4BF",
+            toolOptionActiveBackground: activeStateColors.selectionBackground,
+            toolOptionActiveBorder: activeStateColors.border,
             toolOptionPressedBackground: "#1E293B",
             toolOptionText: "#E2E8F0",
-            toolOptionTextActive: "#CCFBF1",
+            toolOptionTextActive: activeStateColors.text,
             searchResultMeta: "#94A3B8",
             searchResultKindBackground: "#134E4A",
             searchResultKindText: "#CCFBF1",
@@ -261,11 +266,11 @@ export function MapScreen() {
             panelActionPillText: "#E2E8F0",
             filterChipBackground: "#111827",
             filterChipBorder: "#334155",
-            filterChipActiveBackground: "#115E59",
-            filterChipActiveBorder: "#2DD4BF",
+            filterChipActiveBackground: activeStateColors.selectionBackground,
+            filterChipActiveBorder: activeStateColors.border,
             filterChipPressedBackground: "#1E293B",
             filterChipText: "#E2E8F0",
-            filterChipTextActive: "#FFFFFF",
+            filterChipTextActive: activeStateColors.text,
             compassNorth: "#F87171",
             compassArrow: "#E2E8F0",
             badgeBackground: "#B91C1C",
@@ -284,13 +289,13 @@ export function MapScreen() {
         : {
             toolButtonBackground: "rgba(255, 255, 255, 0.96)",
             toolButtonBorder: "#E2E8F0",
-            toolButtonActiveBackground: "#0F766E",
-            toolButtonActiveBorder: "#0F766E",
+            toolButtonActiveBackground: activeStateColors.background,
+            toolButtonActiveBorder: activeStateColors.border,
             toolButtonIcon: "#0F172A",
-            toolButtonActiveIcon: "#FFFFFF",
+            toolButtonActiveIcon: activeStateColors.text,
             toolPanelBackground: "rgba(255, 255, 255, 0.97)",
             toolPanelBorder: "#E2E8F0",
-            toolPanelEyebrow: "#0F766E",
+            toolPanelEyebrow: activeStateColors.tint,
             toolPanelHint: "#475569",
             searchInputBackground: "#FEFCF8",
             searchInputBorder: "#D7E0EA",
@@ -299,11 +304,11 @@ export function MapScreen() {
             searchCloseIcon: "#64748B",
             toolOptionBackground: "#FFFFFF",
             toolOptionBorder: "#D7E0EA",
-            toolOptionActiveBackground: "#CCFBF1",
-            toolOptionActiveBorder: "#0F766E",
+            toolOptionActiveBackground: activeStateColors.background,
+            toolOptionActiveBorder: activeStateColors.border,
             toolOptionPressedBackground: "#F8FAFC",
             toolOptionText: "#334155",
-            toolOptionTextActive: "#115E59",
+            toolOptionTextActive: activeStateColors.text,
             searchResultMeta: "#64748B",
             searchResultKindBackground: "#CCFBF1",
             searchResultKindText: "#115E59",
@@ -312,11 +317,11 @@ export function MapScreen() {
             panelActionPillText: "#334155",
             filterChipBackground: "#FFFFFF",
             filterChipBorder: "#D5D0C5",
-            filterChipActiveBackground: "#0F766E",
-            filterChipActiveBorder: "#0F766E",
+            filterChipActiveBackground: activeStateColors.background,
+            filterChipActiveBorder: activeStateColors.border,
             filterChipPressedBackground: "#F8FAFC",
             filterChipText: "#334155",
-            filterChipTextActive: "#FFFFFF",
+            filterChipTextActive: activeStateColors.text,
             compassNorth: "#DC2626",
             compassArrow: "#334155",
             badgeBackground: "#B91C1C",
@@ -332,16 +337,16 @@ export function MapScreen() {
             discoveryError: "#FEE2E2",
             discoveryText: "#0F172A",
           },
-    [isDark],
+    [activeStateColors, isDark],
   );
   const headerActionColors = useMemo(
     () =>
       isDark
         ? {
-            background: "#0F766E",
-            border: "#2DD4BF",
-            pressedBackground: "#115E59",
-            text: "#F8FAFC",
+            background: activeStateColors.buttonBackground,
+            border: activeStateColors.border,
+            pressedBackground: activeStateColors.buttonPressedBackground,
+            text: activeStateColors.text,
           }
         : {
             background: "#EFF6FF",
@@ -349,7 +354,7 @@ export function MapScreen() {
             pressedBackground: "#DBEAFE",
             text: "#1D4ED8",
           },
-    [isDark],
+    [activeStateColors, isDark],
   );
 
   useLayoutEffect(() => {

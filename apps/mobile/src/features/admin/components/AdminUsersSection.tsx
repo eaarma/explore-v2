@@ -29,6 +29,7 @@ import {
   SectionChipSelector,
   SectionSearchField,
 } from "@/src/shared/components/SectionControls";
+import { getActiveStateColors } from "@/src/shared/constants/activeStateColors";
 import { useColorScheme } from "@/src/shared/hooks/use-color-scheme";
 import { showAppToast } from "@/src/shared/store/appFeedbackStore";
 import { normalizeSearchValue } from "@/src/shared/utils/browseSectionUtils";
@@ -730,6 +731,7 @@ function useAdminUsersSectionStyles(colors: AdminColors) {
 }
 
 function createStyles(colors: AdminColors, isDark: boolean) {
+  const activeStateColors = getActiveStateColors(isDark);
   const neutralText = isDark ? "#CBD5E1" : "#334155";
   const mutedText = isDark ? "#94A3B8" : "#64748B";
   const inactiveBackground = isDark ? "#111827" : "#F8FAFC";
@@ -817,8 +819,10 @@ function createStyles(colors: AdminColors, isDark: boolean) {
       paddingVertical: 12,
     },
     segmentButtonActive: {
-      borderColor: colors.accent,
-      backgroundColor: colors.subtleAccent,
+      borderColor: activeStateColors.border,
+      backgroundColor: isDark
+        ? activeStateColors.selectionBackground
+        : activeStateColors.background,
     },
     segmentButtonText: {
       color: neutralText,
@@ -826,7 +830,7 @@ function createStyles(colors: AdminColors, isDark: boolean) {
       fontWeight: "700",
     },
     segmentButtonTextActive: {
-      color: colors.accent,
+      color: activeStateColors.text,
     },
     chipRow: {
       gap: 10,
@@ -841,8 +845,10 @@ function createStyles(colors: AdminColors, isDark: boolean) {
       paddingVertical: 10,
     },
     filterChipActive: {
-      borderColor: colors.accent,
-      backgroundColor: colors.subtleAccent,
+      borderColor: activeStateColors.border,
+      backgroundColor: isDark
+        ? activeStateColors.selectionBackground
+        : activeStateColors.background,
     },
     filterChipText: {
       color: neutralText,
@@ -850,7 +856,7 @@ function createStyles(colors: AdminColors, isDark: boolean) {
       fontWeight: "600",
     },
     filterChipTextActive: {
-      color: colors.accent,
+      color: activeStateColors.text,
     },
     stateCard: {
       borderRadius: 22,

@@ -1,6 +1,10 @@
 import { useMemo } from "react";
 import { StyleSheet } from "react-native";
 
+import {
+  ACTIVE_STATE_ACCENT,
+  getActiveStateColors,
+} from "@/src/shared/constants/activeStateColors";
 import { useColorScheme } from "@/src/shared/hooks/use-color-scheme";
 
 export type SettingsScreenColors = ReturnType<typeof getSettingsScreenColors>;
@@ -21,6 +25,8 @@ export function useSettingsScreenStyles() {
 }
 
 function getSettingsScreenColors(isDark: boolean) {
+  const activeStateColors = getActiveStateColors(isDark);
+
   if (isDark) {
     return {
       background: "#020617",
@@ -29,12 +35,12 @@ function getSettingsScreenColors(isDark: boolean) {
       title: "#F8FAFC",
       body: "#CBD5E1",
       strongBody: "#E2E8F0",
-      accent: "#5EEAD4",
+      accent: ACTIVE_STATE_ACCENT,
       chipText: "#E2E8F0",
       chipBackground: "#111827",
       chipBorder: "#334155",
-      activeChipBackground: "#134E4A",
-      activeChipText: "#FFFFFF",
+      activeChipBackground: activeStateColors.selectionBackground,
+      activeChipText: activeStateColors.text,
       divider: "#1E293B",
       destructive: "#B91C1C",
       destructiveBackground: "#3F1D1D",
@@ -53,12 +59,12 @@ function getSettingsScreenColors(isDark: boolean) {
     title: "#0F172A",
     body: "#475569",
     strongBody: "#334155",
-    accent: "#0F766E",
+    accent: ACTIVE_STATE_ACCENT,
     chipText: "#334155",
     chipBackground: "#FEFCF8",
     chipBorder: "#D5D0C5",
-    activeChipBackground: "#0F766E",
-    activeChipText: "#FFFFFF",
+    activeChipBackground: activeStateColors.background,
+    activeChipText: activeStateColors.text,
     divider: "#E2E8F0",
     destructive: "#B91C1C",
     destructiveBackground: "#FEE2E2",

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
+import { getActiveStateColors } from "@/src/shared/constants/activeStateColors";
 import { useColorScheme } from "@/src/shared/hooks/use-color-scheme";
 import {
   hideAppDialog,
@@ -90,6 +91,8 @@ export function AppDialogHost() {
 }
 
 function getDialogColors(isDark: boolean) {
+  const activeStateColors = getActiveStateColors(isDark);
+
   if (isDark) {
     return {
       backdrop: "rgba(2, 6, 23, 0.62)",
@@ -100,11 +103,11 @@ function getDialogColors(isDark: boolean) {
       secondaryBackground: "#111827",
       secondaryPressed: "#1E293B",
       secondaryText: "#E2E8F0",
-      primaryBackground: "#0F766E",
-      primaryPressed: "#115E59",
+      primaryBackground: activeStateColors.buttonBackground,
+      primaryPressed: activeStateColors.buttonPressedBackground,
       destructiveBackground: "#B91C1C",
       destructivePressed: "#991B1B",
-      primaryText: "#FFFFFF",
+      primaryText: activeStateColors.text,
       shadow: "#020617",
     };
   }
@@ -118,11 +121,11 @@ function getDialogColors(isDark: boolean) {
     secondaryBackground: "#FFFFFF",
     secondaryPressed: "#F8FAFC",
     secondaryText: "#0F172A",
-    primaryBackground: "#0F766E",
-    primaryPressed: "#115E59",
+    primaryBackground: activeStateColors.buttonBackground,
+    primaryPressed: activeStateColors.buttonPressedBackground,
     destructiveBackground: "#B91C1C",
     destructivePressed: "#991B1B",
-    primaryText: "#FFFFFF",
+    primaryText: activeStateColors.text,
     shadow: "#0F172A",
   };
 }

@@ -55,6 +55,10 @@ import { useAppSettingsStore } from "@/src/features/settings/store/appSettingsSt
 import { getApiErrorMessage } from "@/src/shared/api/apiError";
 import { CategoryImagePlaceholder } from "@/src/shared/components/CategoryImagePlaceholder";
 import { InlineFeedbackCard } from "@/src/shared/components/InlineFeedbackCard";
+import {
+  ACTIVE_STATE_ACCENT,
+  getActiveStateColors,
+} from "@/src/shared/constants/activeStateColors";
 import { useColorScheme } from "@/src/shared/hooks/use-color-scheme";
 import { showAppToast } from "@/src/shared/store/appFeedbackStore";
 import {
@@ -1948,6 +1952,8 @@ type AdminJourneyDetailsColors = ReturnType<
 type AdminJourneyDetailsStyles = ReturnType<typeof createStyles>;
 
 function getAdminJourneyDetailsColors(isDark: boolean) {
+  const activeStateColors = getActiveStateColors(isDark);
+
   if (isDark) {
     return {
       background: "#020617",
@@ -1960,15 +1966,15 @@ function getAdminJourneyDetailsColors(isDark: boolean) {
       body: "#E2E8F0",
       muted: "#94A3B8",
       subtle: "#CBD5E1",
-      accent: "#5EEAD4",
+      accent: ACTIVE_STATE_ACCENT,
       inputBackground: "#111827",
       inputBorder: "#334155",
       inputText: "#F8FAFC",
       inputPlaceholder: "#94A3B8",
       chipBackground: "#111827",
       chipText: "#E2E8F0",
-      stopBadgeBackground: "#134E4A",
-      stopBadgeText: "#99F6E4",
+      stopBadgeBackground: activeStateColors.softBackground,
+      stopBadgeText: ACTIVE_STATE_ACCENT,
       primaryActionBackground: "#115E59",
       primaryActionText: "#FFFFFF",
       secondaryActionBorder: "#334155",
@@ -1996,15 +2002,15 @@ function getAdminJourneyDetailsColors(isDark: boolean) {
     body: "#334155",
     muted: "#64748B",
     subtle: "#475569",
-    accent: "#0F766E",
+    accent: ACTIVE_STATE_ACCENT,
     inputBackground: "#FFFFFF",
     inputBorder: "#CBD5E1",
     inputText: "#0F172A",
     inputPlaceholder: "#94A3B8",
     chipBackground: "#F1F5F9",
     chipText: "#334155",
-    stopBadgeBackground: "#CCFBF1",
-    stopBadgeText: "#115E59",
+    stopBadgeBackground: activeStateColors.softBackground,
+    stopBadgeText: ACTIVE_STATE_ACCENT,
     primaryActionBackground: "#0F766E",
     primaryActionText: "#FFFFFF",
     secondaryActionBorder: "#CBD5E1",

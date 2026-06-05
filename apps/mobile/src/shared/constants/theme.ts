@@ -4,9 +4,10 @@
  */
 
 import { Platform } from 'react-native';
+import { ACTIVE_STATE_ACCENT } from "@/src/shared/constants/activeStateColors";
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+const tintColorLight = ACTIVE_STATE_ACCENT;
+const tintColorDark = ACTIVE_STATE_ACCENT;
 
 export const Colors = {
   light: {

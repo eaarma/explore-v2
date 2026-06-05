@@ -23,6 +23,7 @@ import {
   ContentNoteDialog,
   hasContentNote,
 } from "@/src/shared/components/ContentNoteDialog";
+import { getActiveStateColors } from "@/src/shared/constants/activeStateColors";
 import { useColorScheme } from "@/src/shared/hooks/use-color-scheme";
 import {
   getCachedLocationById,
@@ -460,6 +461,8 @@ type LocationDetailsColors = ReturnType<typeof getLocationDetailsColors>;
 type LocationDetailsStyles = ReturnType<typeof createStyles>;
 
 function getLocationDetailsColors(isDark: boolean) {
+  const activeStateColors = getActiveStateColors(isDark);
+
   if (isDark) {
     return {
       background: "#020617",
@@ -471,13 +474,13 @@ function getLocationDetailsColors(isDark: boolean) {
       body: "#E2E8F0",
       muted: "#94A3B8",
       subtle: "#CBD5E1",
-      accent: "#5EEAD4",
-      accentSoft: "#123B36",
-      accentSoftText: "#99F6E4",
+      accent: activeStateColors.tint,
+      accentSoft: activeStateColors.softBackground,
+      accentSoftText: activeStateColors.tint,
       chipBackground: "#111827",
       chipText: "#E2E8F0",
-      primaryActionBackground: "#115E59",
-      primaryActionText: "#FFFFFF",
+      primaryActionBackground: activeStateColors.buttonBackground,
+      primaryActionText: activeStateColors.text,
       secondaryActionBorder: "#334155",
       secondaryActionBackground: "#111827",
       secondaryActionText: "#E2E8F0",
@@ -494,13 +497,13 @@ function getLocationDetailsColors(isDark: boolean) {
     body: "#334155",
     muted: "#64748B",
     subtle: "#475569",
-    accent: "#0F766E",
-    accentSoft: "#D7EFEA",
-    accentSoftText: "#115E59",
+    accent: activeStateColors.tint,
+    accentSoft: activeStateColors.softBackground,
+    accentSoftText: activeStateColors.tint,
     chipBackground: "#F1F5F9",
     chipText: "#334155",
-    primaryActionBackground: "#0F766E",
-    primaryActionText: "#FFFFFF",
+    primaryActionBackground: activeStateColors.buttonBackground,
+    primaryActionText: activeStateColors.text,
     secondaryActionBorder: "#CBD5E1",
     secondaryActionBackground: "#FFFFFF",
     secondaryActionText: "#334155",

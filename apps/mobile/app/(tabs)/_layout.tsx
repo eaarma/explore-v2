@@ -13,6 +13,7 @@ import { useColorScheme } from "@/src/shared/hooks/use-color-scheme";
 import { HeaderMoreMenu } from "@/src/shared/components/HeaderMoreMenu";
 import { useContentSyncStore } from "@/src/shared/store/contentSyncStore";
 import { syncAllContentCaches } from "@/src/features/content/storage/contentSync";
+import { ACTIVE_STATE_ACCENT } from "@/src/shared/constants/activeStateColors";
 
 const AUTO_CONTENT_SYNC_MIN_INTERVAL_MS = 30_000;
 
@@ -152,7 +153,7 @@ export default function TabsLayout() {
   const tabBarBackgroundColor =
     colorScheme === "dark" ? "#0F172A" : "#FFFFFF";
   const tabBarBorderColor = colorScheme === "dark" ? "#1E293B" : "#E2E8F0";
-  const tabBarActiveTintColor = colorScheme === "dark" ? "#2DD4BF" : "#0F766E";
+  const tabBarActiveTintColor = ACTIVE_STATE_ACCENT;
   const tabBarInactiveTintColor =
     colorScheme === "dark" ? "#94A3B8" : "#64748B";
 

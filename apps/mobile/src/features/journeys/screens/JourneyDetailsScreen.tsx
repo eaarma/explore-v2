@@ -26,6 +26,7 @@ import {
 import { JourneyLocation } from "@/src/features/journeys/types/journeyLocationTypes";
 import { Journey, type JourneyTrait } from "@/src/features/journeys/types/journeyTypes";
 import { normalizeCategory as normalizeLocationCategory } from "@/src/features/locations/components/locationsSectionShared";
+import { getActiveStateColors } from "@/src/shared/constants/activeStateColors";
 import { useColorScheme } from "@/src/shared/hooks/use-color-scheme";
 import {
   getCachedJourneyById,
@@ -529,6 +530,8 @@ type JourneyDetailsColors = ReturnType<typeof getJourneyDetailsColors>;
 type JourneyDetailsStyles = ReturnType<typeof createStyles>;
 
 function getJourneyDetailsColors(isDark: boolean) {
+  const activeStateColors = getActiveStateColors(isDark);
+
   if (isDark) {
     return {
       background: "#020617",
@@ -541,15 +544,15 @@ function getJourneyDetailsColors(isDark: boolean) {
       body: "#E2E8F0",
       muted: "#94A3B8",
       subtle: "#CBD5E1",
-      accent: "#5EEAD4",
-      accentSoft: "#123B36",
-      accentSoftText: "#99F6E4",
+      accent: activeStateColors.tint,
+      accentSoft: activeStateColors.softBackground,
+      accentSoftText: activeStateColors.tint,
       chipBackground: "#111827",
       chipText: "#E2E8F0",
-      stopBadgeBackground: "#134E4A",
-      stopBadgeText: "#99F6E4",
-      primaryActionBackground: "#115E59",
-      primaryActionText: "#FFFFFF",
+      stopBadgeBackground: activeStateColors.softBackground,
+      stopBadgeText: activeStateColors.tint,
+      primaryActionBackground: activeStateColors.buttonBackground,
+      primaryActionText: activeStateColors.text,
       secondaryActionBorder: "#334155",
       secondaryActionBackground: "#111827",
       secondaryActionText: "#E2E8F0",
@@ -567,15 +570,15 @@ function getJourneyDetailsColors(isDark: boolean) {
     body: "#334155",
     muted: "#64748B",
     subtle: "#475569",
-    accent: "#0F766E",
-    accentSoft: "#D7EFEA",
-    accentSoftText: "#115E59",
+    accent: activeStateColors.tint,
+    accentSoft: activeStateColors.softBackground,
+    accentSoftText: activeStateColors.tint,
     chipBackground: "#F1F5F9",
     chipText: "#334155",
-    stopBadgeBackground: "#CCFBF1",
-    stopBadgeText: "#115E59",
-    primaryActionBackground: "#0F766E",
-    primaryActionText: "#FFFFFF",
+    stopBadgeBackground: activeStateColors.softBackground,
+    stopBadgeText: activeStateColors.tint,
+    primaryActionBackground: activeStateColors.buttonBackground,
+    primaryActionText: activeStateColors.text,
     secondaryActionBorder: "#CBD5E1",
     secondaryActionBackground: "#FFFFFF",
     secondaryActionText: "#334155",

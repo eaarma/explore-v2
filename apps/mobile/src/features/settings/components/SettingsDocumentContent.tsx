@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
+import { ACTIVE_STATE_ACCENT } from "@/src/shared/constants/activeStateColors";
 import { useColorScheme } from "@/src/shared/hooks/use-color-scheme";
 
 export type SettingsDocumentSection = {
@@ -103,7 +104,7 @@ function getSettingsDocumentColors(isDark: boolean) {
     cardBorder: isDark ? "#1E293B" : "#E2E8F0",
     title: isDark ? "#F8FAFC" : "#0F172A",
     body: isDark ? "#CBD5E1" : "#475569",
-    accent: isDark ? "#5EEAD4" : "#0F766E",
+    accent: ACTIVE_STATE_ACCENT,
   };
 }
 

@@ -13,6 +13,10 @@ import {
 import { type JourneyLocation } from "@/src/features/journeys/types/journeyLocationTypes";
 import { normalizeCategory } from "@/src/features/locations/components/locationsSectionShared";
 import { type Location } from "@/src/features/locations/types/locationTypes";
+import {
+  ACTIVE_STATE_ACCENT,
+  getActiveStateColors,
+} from "@/src/shared/constants/activeStateColors";
 import { useColorScheme } from "@/src/shared/hooks/use-color-scheme";
 
 const ROW_HEIGHT = 68;
@@ -665,14 +669,16 @@ function normalizeCounty(county: string | null | undefined) {
 type EditorColors = ReturnType<typeof getEditorColors>;
 
 function getEditorColors(isDark: boolean) {
+  const activeStateColors = getActiveStateColors(isDark);
+
   if (isDark) {
     return {
       border: "#1E293B",
       card: "#111827",
       surface: "#0F172A",
       elevated: "#111827",
-      accent: "#5EEAD4",
-      accentSoft: "#134E4A",
+      accent: ACTIVE_STATE_ACCENT,
+      accentSoft: activeStateColors.softBackground,
       title: "#F8FAFC",
       body: "#CBD5E1",
       muted: "#94A3B8",
@@ -685,8 +691,8 @@ function getEditorColors(isDark: boolean) {
       retryButtonBackground: "#111827",
       retryButtonBorder: "#334155",
       retryButtonText: "#E2E8F0",
-      indexBadgeBackground: "#134E4A",
-      indexBadgeText: "#CCFBF1",
+      indexBadgeBackground: activeStateColors.softBackground,
+      indexBadgeText: ACTIVE_STATE_ACCENT,
       removeBackground: "#1E293B",
       removeIcon: "#CBD5E1",
       handleIcon: "#CBD5E1",
@@ -701,8 +707,8 @@ function getEditorColors(isDark: boolean) {
     card: "#FFFFFF",
     surface: "#FEFCF8",
     elevated: "#FFFFFF",
-    accent: "#0F766E",
-    accentSoft: "#CCFBF1",
+    accent: ACTIVE_STATE_ACCENT,
+    accentSoft: activeStateColors.softBackground,
     title: "#0F172A",
     body: "#475569",
     muted: "#64748B",
@@ -715,8 +721,8 @@ function getEditorColors(isDark: boolean) {
     retryButtonBackground: "#FFFFFF",
     retryButtonBorder: "#CBD5E1",
     retryButtonText: "#334155",
-    indexBadgeBackground: "#CCFBF1",
-    indexBadgeText: "#115E59",
+    indexBadgeBackground: activeStateColors.softBackground,
+    indexBadgeText: ACTIVE_STATE_ACCENT,
     removeBackground: "#F8FAFC",
     removeIcon: "#475569",
     handleIcon: "#64748B",

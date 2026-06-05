@@ -12,6 +12,7 @@ import {
   MAP_LEGEND_SECTIONS,
   type MapLegendSwatchConfig,
 } from "@/src/features/map/mapLegend";
+import { ACTIVE_STATE_ACCENT } from "@/src/shared/constants/activeStateColors";
 
 type MapLegendDialogProps = {
   visible: boolean;
@@ -31,7 +32,7 @@ export function MapLegendDialog({
         cardBorder: "#1E293B",
         title: "#F8FAFC",
         subtitle: "#CBD5E1",
-        sectionTitle: "#5EEAD4",
+        sectionTitle: ACTIVE_STATE_ACCENT,
         itemTitle: "#E2E8F0",
         itemDetail: "#94A3B8",
         closeBackground: "#111827",
@@ -44,7 +45,7 @@ export function MapLegendDialog({
         cardBorder: "#E2E8F0",
         title: "#0F172A",
         subtitle: "#475569",
-        sectionTitle: "#0F766E",
+        sectionTitle: ACTIVE_STATE_ACCENT,
         itemTitle: "#0F172A",
         itemDetail: "#64748B",
         closeBackground: "#F8FAFC",

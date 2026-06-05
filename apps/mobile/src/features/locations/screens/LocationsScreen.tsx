@@ -5,6 +5,7 @@ import { ActiveItemsSection } from "@/src/features/discoveries/components/Active
 import { JourneysSection } from "@/src/features/journeys/components/JourneysSection";
 import { LocationsSection } from "@/src/features/locations/components/LocationsSection";
 import { useColorScheme } from "@/src/shared/hooks/use-color-scheme";
+import { getActiveStateColors } from "@/src/shared/constants/activeStateColors";
 
 const TOP_LEVEL_TABS = [
   { key: "locations", label: "Locations" },
@@ -17,27 +18,28 @@ type TopLevelTabKey = (typeof TOP_LEVEL_TABS)[number]["key"];
 export function LocationsScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const activeStateColors = getActiveStateColors(isDark);
   const [activeTopLevelTab, setActiveTopLevelTab] =
     useState<TopLevelTabKey>("locations");
 
   const screenColors = isDark
-    ? {
+      ? {
         background: "#020617",
         tabBorder: "#334155",
         tabBackground: "#0F172A",
-        tabActiveBorder: "#2DD4BF",
-        tabActiveBackground: "#115E59",
+        tabActiveBorder: activeStateColors.border,
+        tabActiveBackground: activeStateColors.selectionBackground,
         tabText: "#E2E8F0",
-        tabActiveText: "#FFFFFF",
+        tabActiveText: activeStateColors.text,
       }
     : {
         background: "#F4EFE6",
         tabBorder: "#D5D0C5",
         tabBackground: "#FEFCF8",
-        tabActiveBorder: "#0F766E",
-        tabActiveBackground: "#0F766E",
+        tabActiveBorder: activeStateColors.border,
+        tabActiveBackground: activeStateColors.background,
         tabText: "#334155",
-        tabActiveText: "#FFFFFF",
+        tabActiveText: activeStateColors.text,
       };
 
   return (

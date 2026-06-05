@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 
+import { getActiveStateColors } from "@/src/shared/constants/activeStateColors";
 import { useColorScheme } from "@/src/shared/hooks/use-color-scheme";
 
 type AccountSettingsDialogProps = {
@@ -314,6 +315,8 @@ export function AccountSettingsDialog({
 }
 
 function getDialogColors(isDark: boolean) {
+  const activeStateColors = getActiveStateColors(isDark);
+
   if (isDark) {
     return {
       backdrop: "rgba(2, 6, 23, 0.66)",
@@ -332,8 +335,8 @@ function getDialogColors(isDark: boolean) {
       inputBorder: "#334155",
       inputText: "#F8FAFC",
       inputPlaceholder: "#64748B",
-      primaryBackground: "#115E59",
-      primaryText: "#FFFFFF",
+      primaryBackground: activeStateColors.buttonBackground,
+      primaryText: activeStateColors.text,
       secondaryBackground: "#111827",
       secondaryBorder: "#334155",
       secondaryText: "#E2E8F0",
@@ -364,8 +367,8 @@ function getDialogColors(isDark: boolean) {
     inputBorder: "#D7E0EA",
     inputText: "#0F172A",
     inputPlaceholder: "#94A3B8",
-    primaryBackground: "#0F766E",
-    primaryText: "#FFFFFF",
+    primaryBackground: activeStateColors.buttonBackground,
+    primaryText: activeStateColors.text,
     secondaryBackground: "#FFFFFF",
     secondaryBorder: "#CBD5E1",
     secondaryText: "#334155",
