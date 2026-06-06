@@ -2,49 +2,61 @@ services:
   db:
     image: postgis/postgis:16-3.4
     restart: unless-stopped
-    # Create apps/api/.env.production from apps/api/.env.production.example first.
-    env_file:
-      - ./apps/api/.env.production
     environment:
-      POSTGRES_DB: explore_app
-      POSTGRES_USER: explore_app
+      POSTGRES_DB: ${POSTGRES_DB:-explore_app}
+      POSTGRES_USER: ${SPRING_DATASOURCE_USERNAME:-explore_user}
+      POSTGRES_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-explore_password}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./apps/api/docker/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U explore_app -d explore_app"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
       timeout: 5s
       retries: 10
-      start_period: 20s
+      start_period: 10s
 
   api:
     build:
       context: ./apps/api
       dockerfile: Dockerfile
-    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
-    env_file:
-      - ./apps/api/.env.production
-    # The compose stack always connects the API to the internal db service.
+    restart: unless-stopped
     environment:
-      SPRING_PROFILES_ACTIVE: prod
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/explore_app
-      SPRING_DATASOURCE_USERNAME: explore_app
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-explore_app}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-explore_user}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-explore_password}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET via --env-file or your shell environment.}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+      APP_CORS_ALLOWED_ORIGIN_PATTERNS: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:-http://localhost:3000,http://127.0.0.1:3000}
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
+      RATE_LIMIT_LOGIN_MAX_REQUESTS: ${RATE_LIMIT_LOGIN_MAX_REQUESTS:-5}
+      RATE_LIMIT_LOGIN_WINDOW: ${RATE_LIMIT_LOGIN_WINDOW:-PT1M}
+      RATE_LIMIT_REGISTER_MAX_REQUESTS: ${RATE_LIMIT_REGISTER_MAX_REQUESTS:-5}
+      RATE_LIMIT_REGISTER_WINDOW: ${RATE_LIMIT_REGISTER_WINDOW:-PT15M}
+      RATE_LIMIT_DISCOVERY_MAX_REQUESTS: ${RATE_LIMIT_DISCOVERY_MAX_REQUESTS:-120}
+      RATE_LIMIT_DISCOVERY_WINDOW: ${RATE_LIMIT_DISCOVERY_WINDOW:-PT1M}
+      RATE_LIMIT_ADMIN_IMAGE_UPLOAD_MAX_REQUESTS: ${RATE_LIMIT_ADMIN_IMAGE_UPLOAD_MAX_REQUESTS:-20}
+      RATE_LIMIT_ADMIN_IMAGE_UPLOAD_WINDOW: ${RATE_LIMIT_ADMIN_IMAGE_UPLOAD_WINDOW:-PT10M}
+      FIREBASE_STORAGE_BUCKET: ${FIREBASE_STORAGE_BUCKET:-}
+      FIREBASE_LOCATION_IMAGE_STORAGE_ROOT: ${FIREBASE_LOCATION_IMAGE_STORAGE_ROOT:-locations}
+      # Prefer FIREBASE_SERVICE_ACCOUNT_BASE64 for containerized runs unless you mount a credentials file.
+      FIREBASE_SERVICE_ACCOUNT_PATH: ${FIREBASE_SERVICE_ACCOUNT_PATH:-}
+      FIREBASE_SERVICE_ACCOUNT_BASE64: ${FIREBASE_SERVICE_ACCOUNT_BASE64:-}
+      JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:-}
     ports:
-      - "127.0.0.1:8080:8080"
+      - "${API_PORT:-8080}:8080"
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health || exit 1"]
-      interval: 30s
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/actuator/health >/dev/null || exit 1"]
+      interval: 15s
       timeout: 5s
-      retries: 5
-      start_period: 40s
-    # If you prefer a file mount instead of FIREBASE_SERVICE_ACCOUNT_BASE64,
-    # create the JSON file on the VPS and uncomment the lines below.
-    # volumes:
-    #   - ./secrets/firebase-service-account.json:/run/secrets/firebase-service-account.json:ro
+      retries: 10
+      start_period: 45s
 
 volumes:
   postgres_data:
