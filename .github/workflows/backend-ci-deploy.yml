@@ -109,8 +109,8 @@ jobs:
             export EXPLORE_API_IMAGE_TAG=${{ github.sha }}
 
             docker compose pull explore-api
-            docker compose up -d --no-deps explore-api
-            docker compose ps explore-api
+            docker compose up -d
+            docker compose ps
 
       - name: Verify API health
         run: |
