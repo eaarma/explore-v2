@@ -87,3 +87,40 @@ jobs:
       - name: Push Docker image
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: docker push ghcr.io/${{ github.repository_owner }}/explore-api:${{ github.sha }}
+
+  deploy-api:
+    name: Deploy API to production
+    runs-on: ubuntu-latest
+    needs: backend
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+
+    steps:
+      - name: Deploy API via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd ${{ secrets.EXPLORE_DEPLOY_PATH }}
+
+            export EXPLORE_API_IMAGE_TAG=${{ github.sha }}
+
+            docker compose pull explore-api
+            docker compose up -d --no-deps explore-api
+            docker compose ps explore-api
+
+      - name: Verify API health
+        run: |
+          for i in {1..12}; do
+            if curl -fsS https://api.explore.tourhub.space/actuator/health > /dev/null; then
+              echo "Explore API is healthy"
+              exit 0
+            fi
+            echo "Waiting for Explore API..."
+            sleep 5
+          done
+          echo "Explore API did not become healthy in time"
+          exit 1
