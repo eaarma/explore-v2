@@ -12,6 +12,7 @@ import {
 } from "@/src/features/journeys/components/journeysSectionShared";
 import { Journey } from "@/src/features/journeys/types/journeyTypes";
 import { CategoryImagePlaceholder } from "@/src/shared/components/CategoryImagePlaceholder";
+import { showJourneyOptionsDialog } from "@/src/shared/utils/locationActions";
 
 type JourneyListCardProps = {
   journey: Journey;
@@ -217,6 +218,23 @@ export function JourneyListCard({
               >
                 Show on map
               </Text>
+            </Pressable>
+
+            <Pressable
+              accessibilityLabel="More journey actions"
+              accessibilityRole="button"
+              onPress={() => showJourneyOptionsDialog(journey)}
+              style={[
+                styles.journeyActionButton,
+                styles.journeyActionIconButton,
+                styles.journeyActionButtonSecondary,
+              ]}
+            >
+              <Ionicons
+                color={colors.secondaryButtonText}
+                name="ellipsis-horizontal"
+                size={20}
+              />
             </Pressable>
 
             {onAddToTrip ? (

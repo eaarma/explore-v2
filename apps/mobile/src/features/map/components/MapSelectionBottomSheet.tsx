@@ -25,6 +25,10 @@ import {
   getActiveStateColors,
 } from "@/src/shared/constants/activeStateColors";
 import { useColorScheme } from "@/src/shared/hooks/use-color-scheme";
+import {
+  showJourneyOptionsDialog,
+  showLocationOptionsDialog,
+} from "@/src/shared/utils/locationActions";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export type MapBottomSheetState = "hidden" | "collapsed" | "expanded";
@@ -391,6 +395,38 @@ export function MapSelectionBottomSheet({
             </Pressable>
 
             <Pressable
+              accessibilityLabel={
+                selection.kind === "location"
+                  ? "More location actions"
+                  : "More journey actions"
+              }
+              accessibilityRole="button"
+              onPress={() => {
+                if (selection.kind === "location") {
+                  showLocationOptionsDialog(selection.item);
+                  return;
+                }
+
+                showJourneyOptionsDialog(selection.item);
+              }}
+              style={[
+                styles.actionButton,
+                styles.secondaryActionButton,
+                styles.actionIconButton,
+                {
+                  borderColor: sheetColors.secondaryButtonBorder,
+                  backgroundColor: sheetColors.secondaryButtonBackground,
+                },
+              ]}
+            >
+              <Ionicons
+                color={sheetColors.secondaryButtonText}
+                name="ellipsis-horizontal"
+                size={20}
+              />
+            </Pressable>
+
+            <Pressable
               onPress={onRequestClose}
               style={[
                 styles.actionButton,
@@ -693,15 +729,22 @@ const styles = StyleSheet.create({
   },
   actionRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
   },
   actionButton: {
-    flex: 1,
+    flexGrow: 1,
+    minWidth: 120,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 14,
+  },
+  actionIconButton: {
+    flexGrow: 0,
+    minWidth: 52,
+    paddingHorizontal: 0,
   },
   secondaryActionButton: {
     borderWidth: 1,

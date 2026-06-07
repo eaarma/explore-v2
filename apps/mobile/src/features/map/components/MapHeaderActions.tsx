@@ -47,27 +47,14 @@ export function MapHeaderActions({
         <Ionicons color={colors.text} name="search-outline" size={18} />
       </Pressable>
 
-      <Pressable
-        accessibilityLabel={
-          isLegendActive ? "Close map legend" : "Open map legend"
-        }
-        accessibilityRole="button"
-        onPress={onLegendPress}
-        style={({ pressed }) => [
-          styles.headerActionButton,
+      <HeaderMoreMenu
+        actions={[
           {
-            borderColor: colors.border,
-            backgroundColor: pressed
-              ? colors.pressedBackground
-              : colors.background,
+            label: isLegendActive ? "Hide map legend" : "Map legend",
+            onPress: onLegendPress,
           },
-          isLegendActive && styles.headerActionButtonActive,
         ]}
-      >
-        <Ionicons color={colors.text} name="book-outline" size={18} />
-      </Pressable>
-
-      <HeaderMoreMenu />
+      />
     </View>
   );
 }

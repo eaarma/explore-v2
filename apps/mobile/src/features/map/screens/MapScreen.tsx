@@ -27,6 +27,7 @@ import { useActiveTripMapContext } from "@/src/features/map/hooks/useActiveTripM
 import { useMapContent } from "@/src/features/map/hooks/useMapContent";
 import { useMapDiscoverySync } from "@/src/features/map/hooks/useMapDiscoverySync";
 import { useMapLocationPermission } from "@/src/features/map/hooks/useMapLocationPermission";
+import { useSelectedJourneyMapContext } from "@/src/features/map/hooks/useSelectedJourneyMapContext";
 import {
   useMapScreenModel,
   type MapScreenTarget,
@@ -97,6 +98,7 @@ export function MapScreen() {
   const searchInputRef = useRef<TextInput | null>(null);
   const lastAppliedCameraFocusAtRef = useRef<string | null>(null);
   const lastAppliedSelectionFocusAtRef = useRef<string | null>(null);
+  const lastAppliedJourneyBoundsRequestKeyRef = useRef<string | null>(null);
   const { focusLatitude, focusLongitude, focusAt, focusKind, focusItemId } =
     useLocalSearchParams<{
       focusLatitude?: string;
@@ -159,6 +161,8 @@ export function MapScreen() {
   const [activeToggleTargetKey, setActiveToggleTargetKey] = useState<
     string | null
   >(null);
+  const [selectedJourneyBoundsRequestKey, setSelectedJourneyBoundsRequestKey] =
+    useState<string | null>(null);
   const selectedLocationId =
     selectedTarget?.kind === "location" && bottomSheetState !== "hidden"
       ? selectedTarget.id
@@ -178,6 +182,15 @@ export function MapScreen() {
     () => new globalThis.Map(journeys.map((journey) => [journey.id, journey])),
     [journeys],
   );
+  const selectedJourneyCoordinate =
+    selectedJourneyId !== null
+      ? journeysById.get(selectedJourneyId) ?? null
+      : null;
+  const { selectedJourneyMapContext } = useSelectedJourneyMapContext({
+    contentRevision,
+    selectedJourneyCoordinate,
+    selectedJourneyId,
+  });
   const { discoveryBanner, showDiscoveryBanner } = useMapDiscoverySync({
     authStatus,
     authUser,
@@ -220,6 +233,7 @@ export function MapScreen() {
     mapZoom,
     overlayVisibility,
     searchQuery,
+    selectedJourneyMapContext,
     selectedJourneyId,
     selectedLocationId,
     selectedTarget,
@@ -461,12 +475,62 @@ export function MapScreen() {
       id: parsedFocusItemId,
     });
     setBottomSheetState("collapsed");
+
+    if (focusKind === "journey") {
+      setSelectedJourneyBoundsRequestKey(focusAt);
+      return;
+    }
+
+    setSelectedJourneyBoundsRequestKey(null);
   }, [
     focusAt,
     focusItemId,
     focusKind,
     visibleJourneysById,
     visibleLocationsById,
+  ]);
+
+  useEffect(() => {
+    if (selectedJourneyId === null) {
+      lastAppliedJourneyBoundsRequestKeyRef.current = null;
+      return;
+    }
+
+    if (
+      !selectedJourneyBoundsRequestKey ||
+      !selectedJourneyMapContext ||
+      selectedJourneyMapContext.journeyId !== selectedJourneyId ||
+      !selectedJourneyMapContext.bounds ||
+      !isMapReady ||
+      !cameraRef.current ||
+      lastAppliedJourneyBoundsRequestKeyRef.current ===
+        selectedJourneyBoundsRequestKey
+    ) {
+      return;
+    }
+
+    lastAppliedJourneyBoundsRequestKeyRef.current =
+      selectedJourneyBoundsRequestKey;
+    cameraRef.current.fitBounds(selectedJourneyMapContext.bounds, {
+      duration: 900,
+      easing: "ease",
+      padding: {
+        top: Math.max(insets.top + 24, 48),
+        right: 48,
+        bottom:
+          Math.max(insets.bottom, 16) +
+          (bottomSheetState === "expanded" ? 360 : 240),
+        left: 48,
+      },
+    });
+  }, [
+    bottomSheetState,
+    insets.bottom,
+    insets.top,
+    isMapReady,
+    selectedJourneyBoundsRequestKey,
+    selectedJourneyId,
+    selectedJourneyMapContext,
   ]);
 
   useEffect(() => {
@@ -549,6 +613,18 @@ export function MapScreen() {
     });
   }
 
+  function disableAllCategories() {
+    setCategoryVisibility((currentVisibility) => {
+      const nextVisibility = { ...currentVisibility };
+
+      for (const category of availableCategories) {
+        nextVisibility[category] = false;
+      }
+
+      return nextVisibility;
+    });
+  }
+
   function disableAllOverlays() {
     setOverlayVisibility({
       hillshade: false,
@@ -599,6 +675,9 @@ export function MapScreen() {
       id: result.id,
     });
     setBottomSheetState("collapsed");
+    setSelectedJourneyBoundsRequestKey(
+      result.kind === "journey" ? `${result.kind}-${result.id}-${Date.now()}` : null,
+    );
     setSearchQuery("");
     setActiveToolPanel(null);
   }
@@ -649,6 +728,9 @@ export function MapScreen() {
       id: pressedId,
     });
     setBottomSheetState("collapsed");
+    setSelectedJourneyBoundsRequestKey(
+      kind === "journey" ? `${kind}-${pressedId}-${Date.now()}` : null,
+    );
   }
 
   function handleOpenDetails(selection: MapBottomSheetSelection) {
@@ -895,6 +977,7 @@ export function MapScreen() {
           onToggleOverlay={toggleOverlay}
           onDisableAllOverlays={disableAllOverlays}
           onToggleCategory={toggleCategory}
+          onDisableAllCategories={disableAllCategories}
           onEnableAllCategories={enableAllCategories}
           onResetMapOrientation={resetMapOrientation}
         />

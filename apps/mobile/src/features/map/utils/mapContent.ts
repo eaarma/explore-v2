@@ -2,9 +2,9 @@ import {
   hydrateJourneysWithProgress,
   hydrateLocationsWithProgress,
 } from "@/src/features/discoveries/storage/discoveryCache";
-import { getActiveJourneys } from "@/src/features/journeys/api/journeysApi";
+import { getAllJourneys } from "@/src/features/journeys/api/journeysApi";
 import type { Journey } from "@/src/features/journeys/types/journeyTypes";
-import { getActiveLocations } from "@/src/features/locations/api/locationsApi";
+import { getAllLocations } from "@/src/features/locations/api/locationsApi";
 import type { Location } from "@/src/features/locations/types/locationTypes";
 import {
   coerceCoordinate,
@@ -14,8 +14,8 @@ import { cacheActiveContent } from "@/src/shared/storage/contentCache";
 
 export async function loadLiveMapData() {
   const [locationsResult, journeysResult] = await Promise.allSettled([
-    getActiveLocations(),
-    getActiveJourneys(),
+    getAllLocations(),
+    getAllJourneys(),
   ]);
 
   const locations =

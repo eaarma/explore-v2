@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { StyleSpecification } from "@maplibre/maplibre-gl-style-spec";
 import {
+  buildFallbackMapStyle,
   buildMapStyleUrl,
+  hasConfiguredMapTilerApiKey,
   type MapStyleKey,
 } from "@/src/features/map/mapConfig";
 import {
@@ -10,15 +12,29 @@ import {
 } from "@/src/features/map/utils/mapStyle";
 
 export function useMapStyle(selectedMapStyle: MapStyleKey) {
-  const currentMapStyleUrl = buildMapStyleUrl(selectedMapStyle);
+  const currentMapStyleUrl = useMemo(
+    () => buildMapStyleUrl(selectedMapStyle),
+    [selectedMapStyle],
+  );
+  const fallbackMapStyle = useMemo(
+    () => buildFallbackMapStyle(selectedMapStyle),
+    [selectedMapStyle],
+  );
   const [roadLabelLayerId, setRoadLabelLayerId] = useState<string | null>(null);
   const [resolvedMapStyle, setResolvedMapStyle] = useState<
     string | StyleSpecification
-  >(currentMapStyleUrl);
+  >(fallbackMapStyle);
 
   useEffect(() => {
     const abortController = new AbortController();
-    setResolvedMapStyle(currentMapStyleUrl);
+    setResolvedMapStyle(fallbackMapStyle);
+    setRoadLabelLayerId(null);
+
+    if (!hasConfiguredMapTilerApiKey()) {
+      return () => {
+        abortController.abort();
+      };
+    }
 
     async function loadRoadLabelLayerId() {
       try {
@@ -48,7 +64,7 @@ export function useMapStyle(selectedMapStyle: MapStyleKey) {
           return;
         }
 
-        setResolvedMapStyle(currentMapStyleUrl);
+        setResolvedMapStyle(fallbackMapStyle);
         setRoadLabelLayerId(null);
       }
     }
@@ -58,7 +74,7 @@ export function useMapStyle(selectedMapStyle: MapStyleKey) {
     return () => {
       abortController.abort();
     };
-  }, [currentMapStyleUrl]);
+  }, [currentMapStyleUrl, fallbackMapStyle]);
 
   return {
     resolvedMapStyle,

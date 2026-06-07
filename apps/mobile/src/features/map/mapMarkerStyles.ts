@@ -2,6 +2,14 @@ const achievedMarkerExpression = ["boolean", ["get", "achieved"], false] as any;
 
 const activeMarkerExpression = ["boolean", ["get", "active"], false] as any;
 
+const dimmedMarkerExpression = ["boolean", ["get", "dimmed"], false] as any;
+
+const selectedJourneyRelatedMarkerExpression = [
+  "boolean",
+  ["get", "selectedJourneyRelated"],
+  false,
+] as any;
+
 export const activeHighlightedFilter = ["==", ["get", "active"], true] as any;
 
 export const tripHighlightedFilter =
@@ -11,6 +19,8 @@ const selectedLocationMarkerIconSizeExpression = [
   "case",
   ["boolean", ["get", "selected"], false],
   0.42,
+  selectedJourneyRelatedMarkerExpression,
+  0.42,
   0.336,
 ] as any;
 
@@ -18,6 +28,8 @@ const selectedJourneyMarkerIconSizeExpression = [
   "case",
   ["boolean", ["get", "selected"], false],
   0.456,
+  selectedJourneyRelatedMarkerExpression,
+  0.465,
   0.372,
 ] as any;
 
@@ -48,6 +60,15 @@ export const locationMarkerLayout = {
 export const journeyMarkerLayout = {
   ...baseMarkerLayout,
   "icon-size": selectedJourneyMarkerIconSizeExpression,
+} as any;
+
+export const markerSymbolPaint = {
+  "icon-opacity": [
+    "case",
+    dimmedMarkerExpression,
+    0.3,
+    1,
+  ],
 } as any;
 
 export const locationActiveGlowPaint = {

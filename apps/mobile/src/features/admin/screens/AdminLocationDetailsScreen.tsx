@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Redirect, Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import {
   Pressable,
   ScrollView,
@@ -48,6 +49,7 @@ import {
   initializeContentCache,
 } from "@/src/shared/storage/contentCache";
 import { useContentSyncStore } from "@/src/shared/store/contentSyncStore";
+import { showLocationOptionsDialog } from "@/src/shared/utils/locationActions";
 
 type LocationEditDraft = {
   title: string;
@@ -724,6 +726,25 @@ export function AdminLocationDetailsScreen() {
                   </Text>
                 </Pressable>
               )}
+
+              {!isEditing ? (
+                <Pressable
+                  accessibilityLabel="More location actions"
+                  accessibilityRole="button"
+                  onPress={() => showLocationOptionsDialog(location)}
+                  style={[
+                    styles.actionButton,
+                    styles.actionButtonSecondary,
+                    styles.actionIconButton,
+                  ]}
+                >
+                  <Ionicons
+                    color={themeColors.secondaryActionText}
+                    name="ellipsis-horizontal"
+                    size={20}
+                  />
+                </Pressable>
+              ) : null}
 
               <Pressable
                 onPress={() => router.back()}
@@ -1692,16 +1713,23 @@ function createStyles(colors: AdminLocationDetailsColors) {
     },
     actionRow: {
       flexDirection: "row",
+      flexWrap: "wrap",
       gap: 12,
       paddingBottom: 12,
     },
     actionButton: {
-      flex: 1,
+      flexGrow: 1,
+      minWidth: 120,
       alignItems: "center",
       justifyContent: "center",
       borderRadius: 16,
       paddingVertical: 14,
       paddingHorizontal: 16,
+    },
+    actionIconButton: {
+      flexGrow: 0,
+      minWidth: 52,
+      paddingHorizontal: 0,
     },
     actionButtonPrimary: {
       backgroundColor: colors.primaryActionBackground,

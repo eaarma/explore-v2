@@ -30,6 +30,7 @@ import {
   initializeContentCache,
 } from "@/src/shared/storage/contentCache";
 import { useContentSyncStore } from "@/src/shared/store/contentSyncStore";
+import { showLocationOptionsDialog } from "@/src/shared/utils/locationActions";
 
 export function LocationDetailsScreen() {
   const colorScheme = useColorScheme();
@@ -292,6 +293,23 @@ export function LocationDetailsScreen() {
                 >
                   Show on map
                 </Text>
+              </Pressable>
+
+              <Pressable
+                accessibilityLabel="More location actions"
+                accessibilityRole="button"
+                onPress={() => showLocationOptionsDialog(location)}
+                style={[
+                  styles.actionButton,
+                  styles.actionButtonSecondary,
+                  styles.actionIconButton,
+                ]}
+              >
+                <Ionicons
+                  color={colors.secondaryActionText}
+                  name="ellipsis-horizontal"
+                  size={20}
+                />
               </Pressable>
 
               <Pressable
@@ -674,16 +692,23 @@ function createStyles(colors: LocationDetailsColors) {
     },
     actionRow: {
       flexDirection: "row",
+      flexWrap: "wrap",
       gap: 12,
       paddingBottom: 12,
     },
     actionButton: {
-      flex: 1,
+      flexGrow: 1,
+      minWidth: 120,
       alignItems: "center",
       justifyContent: "center",
       borderRadius: 16,
       paddingVertical: 14,
       paddingHorizontal: 16,
+    },
+    actionIconButton: {
+      flexGrow: 0,
+      minWidth: 52,
+      paddingHorizontal: 0,
     },
     actionButtonPrimary: {
       backgroundColor: colors.primaryActionBackground,

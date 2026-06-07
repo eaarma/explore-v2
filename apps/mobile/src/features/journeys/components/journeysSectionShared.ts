@@ -661,6 +661,12 @@ function createStyles(colors: JourneySectionColors) {
       paddingVertical: 12,
       paddingHorizontal: 14,
     },
+    journeyActionIconButton: {
+      flexGrow: 0,
+      flexShrink: 0,
+      flexBasis: 52,
+      paddingHorizontal: 0,
+    },
     journeyActionButtonPrimary: {
       backgroundColor: colors.primaryActionBackground,
     },

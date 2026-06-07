@@ -10,6 +10,7 @@ import {
 } from "@/src/features/locations/components/locationsSectionShared";
 import { Location } from "@/src/features/locations/types/locationTypes";
 import { CategoryImagePlaceholder } from "@/src/shared/components/CategoryImagePlaceholder";
+import { showLocationOptionsDialog } from "@/src/shared/utils/locationActions";
 
 type LocationListCardProps = {
   location: Location;
@@ -178,6 +179,23 @@ export function LocationListCard({
               >
                 Show on map
               </Text>
+            </Pressable>
+
+            <Pressable
+              accessibilityLabel="More location actions"
+              accessibilityRole="button"
+              onPress={() => showLocationOptionsDialog(location)}
+              style={[
+                styles.locationActionButton,
+                styles.locationActionIconButton,
+                styles.locationActionButtonSecondary,
+              ]}
+            >
+              <Ionicons
+                color={colors.secondaryButtonText}
+                name="ellipsis-horizontal"
+                size={20}
+              />
             </Pressable>
 
             {onAddToTrip ? (

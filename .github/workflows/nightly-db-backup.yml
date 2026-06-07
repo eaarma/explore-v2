@@ -2,7 +2,7 @@ name: Nightly Database Backup
 
 on:
   schedule:
-    - cron: '15 0 * * *'
+    - cron: "15 0 * * *"
   workflow_dispatch:
 
 permissions:
@@ -16,6 +16,7 @@ jobs:
   backup:
     name: Backup PostgreSQL to Firebase Storage
     runs-on: ubuntu-latest
+    environment: production
     timeout-minutes: 30
     env:
       BACKUP_DATABASE_HOST: ${{ secrets.BACKUP_DATABASE_HOST }}

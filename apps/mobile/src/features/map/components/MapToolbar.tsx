@@ -71,6 +71,7 @@ type MapToolbarProps = {
   onToggleOverlay: (overlayKey: MapOverlayKey) => void;
   onDisableAllOverlays: () => void;
   onToggleCategory: (category: string) => void;
+  onDisableAllCategories: () => void;
   onEnableAllCategories: () => void;
   onResetMapOrientation: () => void;
 };
@@ -95,6 +96,7 @@ export function MapToolbar({
   onToggleOverlay,
   onDisableAllOverlays,
   onToggleCategory,
+  onDisableAllCategories,
   onEnableAllCategories,
   onResetMapOrientation,
 }: MapToolbarProps) {
@@ -444,31 +446,58 @@ export function MapToolbar({
             >
               Categories
             </Text>
-            {!allCategoriesEnabled ? (
-              <Pressable
-                accessibilityRole="button"
-                onPress={onEnableAllCategories}
-                style={({ pressed }) => [
-                  styles.panelActionPill,
-                  {
-                    backgroundColor: chromeColors.panelActionPillBackground,
-                  },
-                  pressed && {
-                    backgroundColor:
-                      chromeColors.panelActionPillPressedBackground,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.panelActionPillText,
-                    { color: chromeColors.panelActionPillText },
+            <View style={styles.panelActionPillRow}>
+              {enabledCategoryCount > 0 ? (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={onDisableAllCategories}
+                  style={({ pressed }) => [
+                    styles.panelActionPill,
+                    {
+                      backgroundColor: chromeColors.panelActionPillBackground,
+                    },
+                    pressed && {
+                      backgroundColor:
+                        chromeColors.panelActionPillPressedBackground,
+                    },
                   ]}
                 >
-                  All on
-                </Text>
-              </Pressable>
-            ) : null}
+                  <Text
+                    style={[
+                      styles.panelActionPillText,
+                      { color: chromeColors.panelActionPillText },
+                    ]}
+                  >
+                    All off
+                  </Text>
+                </Pressable>
+              ) : null}
+              {!allCategoriesEnabled ? (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={onEnableAllCategories}
+                  style={({ pressed }) => [
+                    styles.panelActionPill,
+                    {
+                      backgroundColor: chromeColors.panelActionPillBackground,
+                    },
+                    pressed && {
+                      backgroundColor:
+                        chromeColors.panelActionPillPressedBackground,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.panelActionPillText,
+                      { color: chromeColors.panelActionPillText },
+                    ]}
+                  >
+                    All on
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
           </View>
 
           <Text
@@ -668,6 +697,12 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 6,
+  },
+  panelActionPillRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
+    gap: 8,
   },
   panelActionPillText: {
     fontSize: 12,

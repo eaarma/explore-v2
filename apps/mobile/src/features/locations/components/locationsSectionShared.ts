@@ -594,6 +594,12 @@ function createStyles(colors: LocationSectionColors) {
       paddingVertical: 12,
       paddingHorizontal: 14,
     },
+    locationActionIconButton: {
+      flexGrow: 0,
+      flexShrink: 0,
+      flexBasis: 52,
+      paddingHorizontal: 0,
+    },
     locationActionButtonPrimary: {
       backgroundColor: colors.primaryActionBackground,
     },

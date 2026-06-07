@@ -26,14 +26,21 @@ For CI-style local runs without workers or watch mode:
 ## Preview builds
 
 The `preview` EAS profile builds a debug Android artifact and currently points
-at the LAN HTTP backend configured in [eas.json](./eas.json). That keeps the
-physical-device development workflow working without weakening production.
+at the deployed HTTPS backend configured in [eas.json](./eas.json). It is still
+a debug-oriented build profile, so use it for developer testing rather than
+wide APK distribution.
+
+## Internal production APKs
+
+Use the `internal-production` EAS profile when you want a release-style Android
+APK that can be installed directly by testers.
 
 ## Production builds
 
-Production builds must provide `EXPO_PUBLIC_API_URL` before build time, and it
-must use `https://`. The production EAS profile will now fail fast if that
-variable is missing or still points to plain HTTP.
+The `internal-production` and `production` EAS profiles must provide both
+`EXPO_PUBLIC_API_URL` and `EXPO_PUBLIC_MAPTILER_API_KEY` before build time.
+`EXPO_PUBLIC_API_URL` must use `https://`, and release builds will now fail
+fast if either value is missing or if the API URL still points to plain HTTP.
 
 Use `.env.production.example` as the template for the public variables you want
 to define in EAS or CI.

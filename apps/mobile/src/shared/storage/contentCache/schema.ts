@@ -1,5 +1,5 @@
 export const DATABASE_NAME = "explore-content.db";
-export const CONTENT_CACHE_SCHEMA_VERSION = 7;
+export const CONTENT_CACHE_SCHEMA_VERSION = 8;
 
 export function getCreateSyncMetadataTableSql(ifNotExists = "") {
   return `

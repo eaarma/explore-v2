@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { Redirect, Stack, useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -72,6 +73,7 @@ import {
   initializeContentCache,
 } from "@/src/shared/storage/contentCache";
 import { useContentSyncStore } from "@/src/shared/store/contentSyncStore";
+import { showJourneyOptionsDialog } from "@/src/shared/utils/locationActions";
 
 type JourneyEditDraft = {
   title: string;
@@ -980,6 +982,25 @@ export function AdminJourneyDetailsScreen() {
                   </Text>
                 </Pressable>
               )}
+
+              {!isEditing ? (
+                <Pressable
+                  accessibilityLabel="More journey actions"
+                  accessibilityRole="button"
+                  onPress={() => showJourneyOptionsDialog(journey)}
+                  style={[
+                    styles.actionButton,
+                    styles.actionButtonSecondary,
+                    styles.actionIconButton,
+                  ]}
+                >
+                  <Ionicons
+                    color={colors.secondaryActionText}
+                    name="ellipsis-horizontal"
+                    size={20}
+                  />
+                </Pressable>
+              ) : null}
 
               <Pressable
                 onPress={() => router.back()}
@@ -2443,16 +2464,23 @@ function createStyles(colors: AdminJourneyDetailsColors) {
     },
     actionRow: {
       flexDirection: "row",
+      flexWrap: "wrap",
       gap: 12,
       paddingBottom: 12,
     },
     actionButton: {
-      flex: 1,
+      flexGrow: 1,
+      minWidth: 120,
       alignItems: "center",
       justifyContent: "center",
       borderRadius: 16,
       paddingVertical: 14,
       paddingHorizontal: 16,
+    },
+    actionIconButton: {
+      flexGrow: 0,
+      minWidth: 52,
+      paddingHorizontal: 0,
     },
     actionButtonPrimary: {
       backgroundColor: colors.primaryActionBackground,

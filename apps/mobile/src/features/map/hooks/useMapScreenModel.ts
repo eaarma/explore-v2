@@ -8,7 +8,10 @@ import {
   MAP_OVERLAY_OPTIONS,
   type MapOverlayKey,
 } from "@/src/features/map/mapConfig";
-import type { ActiveTripMapContext } from "@/src/features/map/types/mapStateTypes";
+import type {
+  ActiveTripMapContext,
+  SelectedJourneyMapContext,
+} from "@/src/features/map/types/mapStateTypes";
 import {
   buildAvailableMapCategories,
   createPointFeatureCollection,
@@ -48,6 +51,7 @@ type UseMapScreenModelOptions = {
   mapZoom: number;
   overlayVisibility: Record<MapOverlayKey, boolean>;
   searchQuery: string;
+  selectedJourneyMapContext: SelectedJourneyMapContext | null;
   selectedJourneyId: number | null;
   selectedLocationId: number | null;
   selectedTarget: MapScreenTarget | null;
@@ -64,6 +68,7 @@ export function useMapScreenModel({
   mapZoom,
   overlayVisibility,
   searchQuery,
+  selectedJourneyMapContext,
   selectedJourneyId,
   selectedLocationId,
   selectedTarget,
@@ -120,11 +125,22 @@ export function useMapScreenModel({
         {
           isAchieved: (location) => location.discovered === true,
           isActive: (location) => location.active === true,
+          isDimmed: (location) =>
+            selectedJourneyMapContext !== null &&
+            !selectedJourneyMapContext.locationIds.has(location.id),
+          isSelectedJourneyRelated: (location) =>
+            selectedJourneyMapContext?.locationIds.has(location.id) === true,
           isTripHighlighted: (location) =>
-            activeTripMapContext?.locationIds.has(location.id) === true,
+            activeTripMapContext?.locationIds.has(location.id) === true ||
+            selectedJourneyMapContext?.locationIds.has(location.id) === true,
         },
       ),
-    [activeTripMapContext, selectedLocationId, visibleLocations],
+    [
+      activeTripMapContext,
+      selectedJourneyMapContext,
+      selectedLocationId,
+      visibleLocations,
+    ],
   );
 
   const journeyGeoJson = useMemo(
@@ -136,11 +152,22 @@ export function useMapScreenModel({
         {
           isAchieved: (journey) => journey.completed === true,
           isActive: (journey) => journey.active === true,
+          isDimmed: (journey) =>
+            selectedJourneyMapContext !== null &&
+            selectedJourneyMapContext.journeyId !== journey.id,
+          isSelectedJourneyRelated: (journey) =>
+            selectedJourneyMapContext?.journeyId === journey.id,
           isTripHighlighted: (journey) =>
-            activeTripMapContext?.journeyIds.has(journey.id) === true,
+            activeTripMapContext?.journeyIds.has(journey.id) === true ||
+            selectedJourneyMapContext?.journeyId === journey.id,
         },
       ),
-    [activeTripMapContext, selectedJourneyId, visibleJourneys],
+    [
+      activeTripMapContext,
+      selectedJourneyMapContext,
+      selectedJourneyId,
+      visibleJourneys,
+    ],
   );
 
   const normalizedMapBearing = useMemo(

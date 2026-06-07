@@ -16,7 +16,17 @@ import { useColorScheme } from "@/src/shared/hooks/use-color-scheme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { UnsyncedLogoutModal } from "@/src/shared/components/UnsyncedLogoutModal";
 
-export function HeaderMoreMenu() {
+type HeaderMoreMenuAction = {
+  label: string;
+  onPress: () => void;
+  textColor?: string;
+};
+
+type HeaderMoreMenuProps = {
+  actions?: HeaderMoreMenuAction[];
+};
+
+export function HeaderMoreMenu({ actions = [] }: HeaderMoreMenuProps) {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
@@ -53,6 +63,38 @@ export function HeaderMoreMenu() {
     if (pathname !== "/admin") {
       router.push("/admin");
     }
+  }
+
+  function handleActionPress(action: HeaderMoreMenuAction) {
+    setIsOpen(false);
+    action.onPress();
+  }
+
+  function renderActionItem(action: HeaderMoreMenuAction) {
+    return (
+      <Pressable
+        key={action.label}
+        accessibilityRole="button"
+        onPress={() => handleActionPress(action)}
+        style={({ pressed }) => [
+          styles.menuItem,
+          pressed && {
+            backgroundColor: pressedBackgroundColor,
+          },
+        ]}
+      >
+        <Text
+          style={[
+            styles.menuItemText,
+            {
+              color: action.textColor ?? menuItemTextColor,
+            },
+          ]}
+        >
+          {action.label}
+        </Text>
+      </Pressable>
+    );
   }
 
   const triggerIconColor = ACTIVE_STATE_ACCENT;
@@ -127,6 +169,8 @@ export function HeaderMoreMenu() {
               </Pressable>
             ) : null}
 
+            {isAdmin ? actions.map(renderActionItem) : null}
+
             <Pressable
               accessibilityRole="button"
               onPress={handleSettingsPress}
@@ -148,6 +192,8 @@ export function HeaderMoreMenu() {
                 Settings
               </Text>
             </Pressable>
+
+            {isAdmin ? null : actions.map(renderActionItem)}
 
             <Pressable
               accessibilityRole="button"

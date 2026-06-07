@@ -12,3 +12,9 @@ export type ActiveTripMapContext = {
   journeyIds: Set<number>;
   totalCount: number;
 };
+
+export type SelectedJourneyMapContext = {
+  bounds: [number, number, number, number] | null;
+  journeyId: number;
+  locationIds: Set<number>;
+};

@@ -1,7 +1,10 @@
-import { getActiveJourneys, getJourneyLocations } from "@/src/features/journeys/api/journeysApi";
+import {
+  getAllJourneys,
+  getJourneyLocations,
+} from "@/src/features/journeys/api/journeysApi";
 import type { JourneyLocation } from "@/src/features/journeys/types/journeyLocationTypes";
 import type { Journey } from "@/src/features/journeys/types/journeyTypes";
-import { getActiveLocations } from "@/src/features/locations/api/locationsApi";
+import { getAllLocations } from "@/src/features/locations/api/locationsApi";
 import type { Location } from "@/src/features/locations/types/locationTypes";
 import {
   getCachedJourneyLocations,
@@ -19,8 +22,8 @@ export type SyncedActiveContent = {
 
 export async function syncActiveContentCache(): Promise<SyncedActiveContent> {
   const [locations, journeys] = await Promise.all([
-    getActiveLocations(),
-    getActiveJourneys(),
+    getAllLocations(),
+    getAllJourneys(),
   ]);
 
   await cacheActiveContent({

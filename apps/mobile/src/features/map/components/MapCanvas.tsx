@@ -31,6 +31,7 @@ import {
   locationMarkerLayout,
   locationTripGlowPaint,
   locationTripHighlightPaint,
+  markerSymbolPaint,
   markerHitbox,
   tripHighlightedFilter,
 } from "@/src/features/map/mapMarkerStyles";
@@ -172,18 +173,20 @@ export function MapCanvas({
       ) : null}
       <Images images={mapMarkerImages} />
 
-      <RasterSource
-        id="hillshade-overlay-source"
-        attribution={MAPTILER_HILLSHADE_ATTRIBUTION}
-        url={MAPTILER_HILLSHADE_OVERLAY_TILESET_URL}
-      >
-        <Layer
-          id="hillshade-overlay-layer"
-          type="raster"
-          beforeId={locationTripGlowLayerId}
-          paint={hillshadeOverlayLayerPaint}
-        />
-      </RasterSource>
+      {overlayVisibility.hillshade ? (
+        <RasterSource
+          id="hillshade-overlay-source"
+          attribution={MAPTILER_HILLSHADE_ATTRIBUTION}
+          url={MAPTILER_HILLSHADE_OVERLAY_TILESET_URL}
+        >
+          <Layer
+            id="hillshade-overlay-layer"
+            type="raster"
+            beforeId={locationTripGlowLayerId}
+            paint={hillshadeOverlayLayerPaint}
+          />
+        </RasterSource>
+      ) : null}
 
       {overlayVisibility.landcover ? (
         <VectorSource
@@ -400,6 +403,7 @@ export function MapCanvas({
           id={locationLayerId}
           type="symbol"
           layout={locationMarkerLayout}
+          paint={markerSymbolPaint}
         />
       </GeoJSONSource>
 
@@ -438,6 +442,7 @@ export function MapCanvas({
           id={journeyLayerId}
           type="symbol"
           layout={journeyMarkerLayout}
+          paint={markerSymbolPaint}
         />
       </GeoJSONSource>
     </MapLibreMap>

@@ -38,6 +38,7 @@ import {
   ContentNoteDialog,
   hasContentNote,
 } from "@/src/shared/components/ContentNoteDialog";
+import { showJourneyOptionsDialog } from "@/src/shared/utils/locationActions";
 
 export function JourneyDetailsScreen() {
   const colorScheme = useColorScheme();
@@ -386,6 +387,23 @@ export function JourneyDetailsScreen() {
                 >
                   Show on map
                 </Text>
+              </Pressable>
+
+              <Pressable
+                accessibilityLabel="More journey actions"
+                accessibilityRole="button"
+                onPress={() => showJourneyOptionsDialog(journey)}
+                style={[
+                  styles.actionButton,
+                  styles.actionButtonSecondary,
+                  styles.actionIconButton,
+                ]}
+              >
+                <Ionicons
+                  color={colors.secondaryActionText}
+                  name="ellipsis-horizontal"
+                  size={20}
+                />
               </Pressable>
 
               <Pressable
@@ -769,16 +787,23 @@ function createStyles(colors: JourneyDetailsColors) {
     },
     actionRow: {
       flexDirection: "row",
+      flexWrap: "wrap",
       gap: 12,
       paddingBottom: 12,
     },
     actionButton: {
-      flex: 1,
+      flexGrow: 1,
+      minWidth: 120,
       alignItems: "center",
       justifyContent: "center",
       borderRadius: 16,
       paddingVertical: 14,
       paddingHorizontal: 16,
+    },
+    actionIconButton: {
+      flexGrow: 0,
+      minWidth: 52,
+      paddingHorizontal: 0,
     },
     actionButtonPrimary: {
       backgroundColor: colors.primaryActionBackground,

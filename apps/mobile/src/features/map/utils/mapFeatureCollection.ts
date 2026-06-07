@@ -22,6 +22,8 @@ export function createPointFeatureCollection<T extends MapPoint>(
   options: {
     isAchieved: (point: T) => boolean;
     isActive: (point: T) => boolean;
+    isDimmed: (point: T) => boolean;
+    isSelectedJourneyRelated: (point: T) => boolean;
     isTripHighlighted: (point: T) => boolean;
   },
 ) {
@@ -41,6 +43,8 @@ export function createPointFeatureCollection<T extends MapPoint>(
           : normalizeLocationCategory(point.category);
       const achieved = options.isAchieved(point);
       const active = options.isActive(point);
+      const dimmed = options.isDimmed(point);
+      const selectedJourneyRelated = options.isSelectedJourneyRelated(point);
       const tripHighlighted = options.isTripHighlighted(point);
 
       return [
@@ -59,6 +63,8 @@ export function createPointFeatureCollection<T extends MapPoint>(
             ),
             achieved,
             active,
+            dimmed,
+            selectedJourneyRelated,
             tripHighlighted,
             selected: point.id === selectedId,
           },
