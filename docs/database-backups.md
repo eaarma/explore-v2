@@ -1,37 +1,47 @@
 # Database Backups
 
-This project includes a simple nightly PostgreSQL backup flow that stores
+This project includes a backend-managed PostgreSQL backup flow that stores
 compressed `pg_dump` artifacts in Firebase Storage and keeps the last `14` days
-of backups.
+of backups by default.
 
-## What runs nightly
+## What runs on schedule
 
-The scheduled workflow is [nightly-db-backup.yml](../.github/workflows/nightly-db-backup.yml).
+The backup scheduler now runs inside the backend on the VPS. That means it can
+reach the private PostgreSQL container directly and does not depend on GitHub
+Actions network access.
 
-Current schedule:
+Each scheduled run does this:
 
-- `15 0 * * *` in GitHub Actions cron syntax
-- GitHub Actions schedules are always `UTC`
-- that currently runs at `03:15` in `Europe/Tallinn` during daylight saving time
-
-Each run does this:
-
-1. install `pg_dump`
-2. create a compressed PostgreSQL custom-format dump
+1. execute `pg_dump` against the configured PostgreSQL database
+2. write a compressed PostgreSQL custom-format dump to a temporary local file
 3. upload the dump to `gs://<bucket>/backups/postgres/`
-4. delete any backup objects older than `14` days from that prefix
+4. delete any backup objects older than the configured retention window
 
-## Required GitHub secrets
+Default schedule configuration:
 
-Configure these repository or environment secrets before enabling the workflow:
+- `BACKUP_SCHEDULER_ENABLED=true` in production
+- `BACKUP_SCHEDULER_CRON=0 15 0 * * *`
+- `BACKUP_SCHEDULER_ZONE=UTC`
+
+That preserves the old `00:15 UTC` timing unless you override it.
+
+## Required backend environment
+
+Configure these backend environment variables on the VPS:
+
+- `BACKUP_SCHEDULER_ENABLED`
+- `BACKUP_FIREBASE_STORAGE_BUCKET`
+- `FIREBASE_SERVICE_ACCOUNT_BASE64` or `FIREBASE_SERVICE_ACCOUNT_PATH`
+
+Usually you do not need separate backup database credentials because the backup
+service can reuse the main Spring datasource settings. If needed, these
+override values are available:
 
 - `BACKUP_DATABASE_HOST`
 - `BACKUP_DATABASE_PORT`
 - `BACKUP_DATABASE_NAME`
 - `BACKUP_DATABASE_USER`
 - `BACKUP_DATABASE_PASSWORD`
-- `BACKUP_FIREBASE_STORAGE_BUCKET`
-- `FIREBASE_SERVICE_ACCOUNT_BASE64`
 
 `FIREBASE_SERVICE_ACCOUNT_BASE64` should be the base64-encoded contents of a
 Google service account JSON file with permission to create, list, and delete
@@ -48,12 +58,18 @@ with `pg_restore`.
 
 ## Manual run
 
-You can trigger the workflow manually from the GitHub Actions tab with
-`workflow_dispatch`.
+You can trigger a backup manually in two ways:
+
+- from the admin app: `Admin -> Customize -> Operations -> Run backup now`
+- through the admin API: `POST /api/admin/system/database-backup/run`
+
+To inspect the current backup state, use:
+
+- `GET /api/admin/system/database-backup`
 
 ## Local script usage
 
-The workflow uses these scripts:
+The repo still includes shell scripts for one-off CLI usage:
 
 - [backup-postgres-to-firebase.sh](../scripts/backups/backup-postgres-to-firebase.sh)
 - [prune-firebase-backups.sh](../scripts/backups/prune-firebase-backups.sh)

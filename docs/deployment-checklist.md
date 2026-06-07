@@ -23,7 +23,7 @@ Before starting a deployment:
 - confirm the backend geospatial tests pass on the current branch
 - confirm the latest database backup completed successfully
 - if the release includes risky schema or content changes, create an extra
-  manual backup before deployment
+  manual backup before deployment from the admin backup controls or CLI script
 
 ## 2. Required backend configuration
 
@@ -50,6 +50,19 @@ Required for backend-managed image uploads:
 - `FIREBASE_STORAGE_BUCKET`
 - either `FIREBASE_SERVICE_ACCOUNT_PATH`
 - or `FIREBASE_SERVICE_ACCOUNT_BASE64`
+
+Required for backend-managed scheduled backups:
+
+- `BACKUP_SCHEDULER_ENABLED`
+- `BACKUP_FIREBASE_STORAGE_BUCKET`
+
+Recommended backup values:
+
+- `BACKUP_SCHEDULER_CRON`
+- `BACKUP_SCHEDULER_ZONE`
+- `BACKUP_RETENTION_DAYS`
+- optional `BACKUP_DATABASE_*` overrides when the backup target differs from
+  `SPRING_DATASOURCE_*`
 
 ## 3. Required mobile production configuration
 
@@ -89,10 +102,10 @@ Current expected rule posture:
 
 Before deploy:
 
-- confirm the nightly backup workflow is enabled and healthy
+- confirm the backend backup scheduler is enabled on the production instance
 - confirm the most recent backup object exists in Firebase Storage
-- for risky releases, create a manual backup using
-  [backup-postgres-to-firebase.sh](../scripts/backups/backup-postgres-to-firebase.sh)
+- for risky releases, create a manual backup using the admin Operations screen
+  or [backup-postgres-to-firebase.sh](../scripts/backups/backup-postgres-to-firebase.sh)
 
 If you need restore steps, use:
 
@@ -162,7 +175,7 @@ After the build:
 After deployment is live:
 
 - confirm CI remains green on the deployed revision
-- confirm the next scheduled nightly database backup still succeeds
+- confirm the next scheduled backend database backup still succeeds
 - confirm no unexpected rate-limit spikes or auth errors appear in logs
 - confirm public routes do not expose inactive content
 - confirm managers cannot update users

@@ -6,7 +6,7 @@ Firebase Storage:
 - [restore-postgres-from-firebase.sh](../scripts/backups/restore-postgres-from-firebase.sh)
 
 Use it when you need to restore a previously uploaded `.dump` backup created by
-the nightly backup flow.
+the backend-managed backup flow.
 
 ## Restore overview
 
