@@ -78,4 +78,12 @@ If you want to run them outside GitHub Actions, provide the same environment
 variables and make sure both `pg_dump` and `gsutil` are installed and
 authenticated.
 
+For the manual backup script specifically:
+
+- `BACKUP_DATABASE_*` values are optional when `SPRING_DATASOURCE_URL`,
+  `SPRING_DATASOURCE_USERNAME`, and `SPRING_DATASOURCE_PASSWORD` already point
+  at the database you want to dump
+- `BACKUP_OUTPUT_DIRECTORY` is supported for parity with the backend scheduler
+  config, and the legacy `BACKUP_OUTPUT_DIR` name still works
+
 For restore instructions, see [database-restore.md](./database-restore.md).

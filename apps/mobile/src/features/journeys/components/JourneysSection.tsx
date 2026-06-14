@@ -1,13 +1,11 @@
 import {
   startTransition,
-  useDeferredValue,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
 import { useRouter } from "expo-router";
-import { TextInput, View } from "react-native";
 
 import { useAuthStore } from "@/src/features/auth/store/authStore";
 import {
@@ -60,6 +58,7 @@ import {
   type UserCoordinates,
   useResolvedUserCoordinates,
 } from "@/src/shared/hooks/useResolvedUserCoordinates";
+import { useDeferredSearchQuery } from "@/src/shared/hooks/useDeferredSearchQuery";
 import { useContentSyncStore } from "@/src/shared/store/contentSyncStore";
 import {
   calculateDistanceKm,
@@ -67,6 +66,7 @@ import {
   normalizeCounty,
   normalizeSearchValue,
 } from "@/src/shared/utils/browseSectionUtils";
+import { toggleValueInArray } from "@/src/shared/utils/selectionUtils";
 
 const JOURNEY_BROWSE_OPTION = {
   key: "all-estonia",
@@ -93,14 +93,15 @@ export function JourneysSection() {
     (state) => state.markUpdated,
   );
   const contentRevision = useContentSyncStore((state) => state.revision);
+  const {
+    searchQuery,
+    setSearchQuery,
+    searchInputRef,
+    activeSearchQuery,
+    clearSearchQuery,
+  } = useDeferredSearchQuery();
   const [journeyView, setJourneyView] = useState<JourneyViewKey>("nearby");
   const [nearbyMode, setNearbyMode] = useState<JourneyNearbyMode>("radius");
-  const [searchQuery, setSearchQuery] = useState("");
-  const searchInputRef = useRef<TextInput | null>(null);
-  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
-  const deferredSearchQuery = useDeferredValue(normalizedSearchQuery);
-  const activeSearchQuery =
-    normalizedSearchQuery.length === 0 ? normalizedSearchQuery : deferredSearchQuery;
   const [journeys, setJourneys] = useState<Journey[]>([]);
   const [journeyLocations, setJourneyLocations] = useState<JourneyLocation[]>(
     [],
@@ -125,13 +126,17 @@ export function JourneysSection() {
   const [activeToggleJourneyId, setActiveToggleJourneyId] = useState<
     number | null
   >(null);
+  const resolveUserCoordinatesRef = useRef(resolveUserCoordinates);
+  const journeysRef = useRef(journeys);
+  resolveUserCoordinatesRef.current = resolveUserCoordinates;
+  journeysRef.current = journeys;
 
   useEffect(() => {
     let isMounted = true;
 
     async function loadJourneysScreenData() {
       setIsLoadingJourneys(true);
-      const positionPromise = resolveUserCoordinates();
+      const positionPromise = resolveUserCoordinatesRef.current();
 
       try {
         await initializeContentCache();
@@ -255,12 +260,15 @@ export function JourneysSection() {
   useEffect(() => {
     let isMounted = true;
 
-    async function syncActiveJourneyFlags() {
-      if (!user?.id || journeys.length === 0) {
+    async function syncJourneyFlags() {
+      if (!user?.id || journeysRef.current.length === 0) {
         return;
       }
 
-      const nextJourneys = await hydrateJourneysWithProgress(user.id, journeys);
+      const nextJourneys = await hydrateJourneysWithProgress(
+        user.id,
+        journeysRef.current,
+      );
 
       if (!isMounted) {
         return;
@@ -271,7 +279,7 @@ export function JourneysSection() {
       });
     }
 
-    void syncActiveJourneyFlags();
+    void syncJourneyFlags();
 
     return () => {
       isMounted = false;
@@ -375,11 +383,7 @@ export function JourneysSection() {
       : JOURNEY_SORT_OPTIONS;
 
   function toggleCategory(category: string) {
-    setSelectedCategories((current) =>
-      current.includes(category)
-        ? current.filter((item) => item !== category)
-        : [...current, category],
-    );
+    setSelectedCategories((current) => toggleValueInArray(current, category));
   }
 
   function toggleCounty(county: string) {
@@ -457,14 +461,6 @@ export function JourneysSection() {
         currentJourneyId === journey.id ? null : currentJourneyId,
       );
     }
-  }
-
-  function clearSearchQuery() {
-    setSearchQuery("");
-
-    requestAnimationFrame(() => {
-      searchInputRef.current?.focus();
-    });
   }
 
   const sharedHeaderControls = (

@@ -36,6 +36,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 @SpringBootTest(properties = {
         "security.rate-limit.enabled=true",
+        "security.rate-limit.storage=database",
         "security.rate-limit.login.max-requests=1",
         "security.rate-limit.login.window=PT1M",
         "security.rate-limit.discovery.max-requests=1",

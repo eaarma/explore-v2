@@ -19,6 +19,9 @@ import org.springframework.validation.annotation.Validated;
 public class RateLimitProperties {
 
     private boolean enabled = true;
+    private boolean trustForwardedHeaders = false;
+    @NotNull
+    private StorageMode storage = StorageMode.MEMORY;
 
     @Valid
     @NotNull
@@ -53,5 +56,10 @@ public class RateLimitProperties {
             this.maxRequests = maxRequests;
             this.window = window;
         }
+    }
+
+    public enum StorageMode {
+        MEMORY,
+        DATABASE
     }
 }

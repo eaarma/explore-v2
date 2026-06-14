@@ -1,6 +1,7 @@
 import {
   startTransition,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import type { Journey } from "@/src/features/journeys/types/journeyTypes";
@@ -35,18 +36,25 @@ export function useMapContent({
   const [journeys, setJourneys] = useState<Journey[]>([]);
   const [isMapDataLoading, setIsMapDataLoading] = useState(true);
   const [mapDataError, setMapDataError] = useState<string | null>(null);
+  const locationsRef = useRef(locations);
+  const journeysRef = useRef(journeys);
+  locationsRef.current = locations;
+  journeysRef.current = journeys;
 
   useEffect(() => {
     let isMounted = true;
 
-    async function syncActiveMapFlags() {
-      if (!authUserId || (locations.length === 0 && journeys.length === 0)) {
+    async function syncMapFlags() {
+      if (
+        !authUserId ||
+        (locationsRef.current.length === 0 && journeysRef.current.length === 0)
+      ) {
         return;
       }
 
       const hydratedContent = await hydrateMapContent(
-        locations,
-        journeys,
+        locationsRef.current,
+        journeysRef.current,
         authUserId,
       );
 
@@ -60,7 +68,7 @@ export function useMapContent({
       });
     }
 
-    void syncActiveMapFlags();
+    void syncMapFlags();
 
     return () => {
       isMounted = false;

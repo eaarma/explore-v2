@@ -9,6 +9,7 @@ import com.explore.app.user.dto.UpdateUserRequest;
 import com.explore.app.user.dto.UserResponse;
 import com.explore.app.journeys.repository.JourneyCompletionRepository;
 import com.explore.app.locations.repository.LocationDiscoveryRepository;
+import com.explore.app.shared.NotFoundException;
 import com.explore.app.trips.repository.TripRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -55,7 +56,7 @@ public class UserService {
 
     public UserResponse getUserById(UUID id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                .orElseThrow(() -> new NotFoundException("User not found"));
 
         return userMapper.toResponse(user);
     }
@@ -81,7 +82,7 @@ public class UserService {
     @Transactional
     public UserResponse updateUser(UUID id, UpdateUserRequest request) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                .orElseThrow(() -> new NotFoundException("User not found"));
 
         user.setName(normalizeRequiredName(request.getName()));
         user.setRole(request.getRole());
@@ -94,7 +95,7 @@ public class UserService {
         String normalizedEmail = normalizeRequiredEmail(email);
 
         return userRepository.findByEmail(normalizedEmail)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                .orElseThrow(() -> new NotFoundException("User not found"));
     }
 
     private String normalizeRequiredEmail(String email) {

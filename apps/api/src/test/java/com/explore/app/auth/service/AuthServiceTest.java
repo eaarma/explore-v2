@@ -9,7 +9,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
+import java.util.Optional;
 
+import com.explore.app.appconfig.mapper.AppConfigurationMapper;
+import com.explore.app.appconfig.model.AppConfiguration;
+import com.explore.app.appconfig.repository.AppConfigurationRepository;
 import com.explore.app.auth.dto.LoginResponse;
 import com.explore.app.auth.dto.RegisterRequest;
 import com.explore.app.security.jwt.JwtService;
@@ -39,6 +43,12 @@ class AuthServiceTest {
     private UserRepository userRepository;
 
     @Mock
+    private AppConfigurationRepository appConfigurationRepository;
+
+    @Mock
+    private AppConfigurationMapper appConfigurationMapper;
+
+    @Mock
     private JwtService jwtService;
 
     @Mock
@@ -51,7 +61,7 @@ class AuthServiceTest {
     private AuthService authService;
 
     @Test
-    void registerPersistsNormalizedUserWithDefaultRoleAndLegalMetadata() {
+    void registerPersistsNormalizedUserWithConfiguredLegalVersions() {
         RegisterRequest request = RegisterRequest.builder()
                 .email("  New.User@Example.com  ")
                 .password("StrongPass1!")
@@ -65,7 +75,12 @@ class AuthServiceTest {
                 .role(Role.USER)
                 .status(UserStatus.ACTIVE)
                 .build();
+        AppConfiguration appConfiguration = AppConfiguration.builder()
+                .privacyPolicyVersion("2026-06-14")
+                .termsVersion("2026-06-15")
+                .build();
 
+        when(appConfigurationRepository.findGlobal()).thenReturn(Optional.of(appConfiguration));
         when(userRepository.existsByEmail("new.user@example.com")).thenReturn(false);
         when(passwordEncoder.encode("StrongPass1!")).thenReturn("encoded-password");
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -92,13 +107,47 @@ class AuthServiceTest {
         assertEquals(savedUser.getTermsAcceptedAt(), savedUser.getPrivacyPolicyAcceptedAt());
         assertTrue(!savedUser.getTermsAcceptedAt().isBefore(beforeRegistration));
         assertTrue(!savedUser.getTermsAcceptedAt().isAfter(afterRegistration));
-        assertEquals("2026-05-31", savedUser.getTermsVersion());
-        assertEquals("2026-05-31", savedUser.getPrivacyPolicyVersion());
+        assertEquals("2026-06-15", savedUser.getTermsVersion());
+        assertEquals("2026-06-14", savedUser.getPrivacyPolicyVersion());
 
         verify(userRepository).existsByEmail("new.user@example.com");
+        verify(appConfigurationRepository).findGlobal();
 
         assertEquals("jwt-token", response.getAccessToken());
         assertEquals("Bearer", response.getTokenType());
         assertSame(mappedUser, response.getUser());
+    }
+
+    @Test
+    void registerFallsBackToDefaultLegalVersionsWhenConfigurationRowIsMissing() {
+        RegisterRequest request = RegisterRequest.builder()
+                .email("fallback@example.com")
+                .password("StrongPass1!")
+                .name("Fallback User")
+                .termsAccepted(true)
+                .privacyPolicyAccepted(true)
+                .build();
+        AppConfiguration defaultConfiguration = AppConfiguration.builder()
+                .privacyPolicyVersion("2026-05-31")
+                .termsVersion("2026-05-31")
+                .build();
+
+        when(appConfigurationRepository.findGlobal()).thenReturn(Optional.empty());
+        when(appConfigurationMapper.createDefaultEntity()).thenReturn(defaultConfiguration);
+        when(userRepository.existsByEmail("fallback@example.com")).thenReturn(false);
+        when(passwordEncoder.encode("StrongPass1!")).thenReturn("encoded-password");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userMapper.toResponse(any(User.class))).thenReturn(UserResponse.builder().build());
+        when(jwtService.generateToken(any(UserDetails.class))).thenReturn("jwt-token");
+
+        authService.register(request);
+
+        ArgumentCaptor<User> savedUserCaptor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(savedUserCaptor.capture());
+
+        User savedUser = savedUserCaptor.getValue();
+        assertEquals("2026-05-31", savedUser.getTermsVersion());
+        assertEquals("2026-05-31", savedUser.getPrivacyPolicyVersion());
+        verify(appConfigurationMapper).createDefaultEntity();
     }
 }

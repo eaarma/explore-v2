@@ -1,7 +1,10 @@
 package com.explore.app.imports;
 
+import java.time.Instant;
 import java.util.List;
 
+import com.explore.app.appconfig.model.AppConfiguration;
+import com.explore.app.appconfig.repository.AppConfigurationRepository;
 import com.explore.app.journeys.model.Journey;
 import com.explore.app.journeys.model.JourneyLocation;
 import com.explore.app.journeys.model.JourneyStatus;
@@ -21,6 +24,8 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -32,7 +37,10 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class LegacyDataImporter implements ApplicationRunner {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(LegacyDataImporter.class);
+
     private final ObjectMapper objectMapper;
+    private final AppConfigurationRepository appConfigurationRepository;
     private final LocationRepository locationRepository;
     private final JourneyRepository journeyRepository;
     private final JourneyLocationRepository journeyLocationRepository;
@@ -45,12 +53,63 @@ public class LegacyDataImporter implements ApplicationRunner {
     @Value("classpath:imports/exported_data.json")
     private Resource legacyDataFile;
 
+    @Value("${app.seed.legacy-enabled:false}")
+    private boolean legacySeedEnabled;
+
     @Override
     @Transactional
     public void run(ApplicationArguments args) throws Exception {
-        if (locationRepository.count() > 0 || journeyRepository.count() > 0) {
+        long locationCount = locationRepository.count();
+        long journeyCount = journeyRepository.count();
+        boolean hasLocations = locationCount > 0;
+        boolean hasJourneys = journeyCount > 0;
+
+        if (hasLocations != hasJourneys) {
+            throw new IllegalStateException(
+                    "Legacy starter import requires locations and journeys to be both empty or both populated. "
+                            + "Found locations=%d, journeys=%d."
+                            .formatted(locationCount, journeyCount));
+        }
+
+        AppConfiguration configuration = appConfigurationRepository.findGlobal()
+                .orElseThrow(() -> new IllegalStateException(
+                        "Global app configuration row is missing; cannot determine starter seed state."));
+
+        if (!hasLocations && configuration.getStarterDataSeededAt() != null) {
+            throw new IllegalStateException(
+                    "Starter data is marked as already seeded at %s, but locations and journeys are empty. "
+                            + "Refusing to reseed automatically."
+                            .formatted(configuration.getStarterDataSeededAt()));
+        }
+
+        if (!legacySeedEnabled) {
+            if (hasLocations) {
+                LOGGER.info(
+                        "Legacy starter data import is disabled; skipping startup seed because content already exists "
+                                + "(locations={}, journeys={}).",
+                        locationCount,
+                        journeyCount);
+            } else {
+                LOGGER.info(
+                        "Legacy starter data import is disabled; empty database will remain unseeded until "
+                                + "app.seed.legacy-enabled is turned on.");
+            }
             return;
         }
+
+        if (hasLocations) {
+            LOGGER.info(
+                    "Legacy starter data import skipped because content already exists "
+                            + "(locations={}, journeys={}, seededAt={}).",
+                    locationCount,
+                    journeyCount,
+                    configuration.getStarterDataSeededAt());
+            return;
+        }
+
+        LOGGER.info(
+                "Legacy starter data import starting from {}.",
+                legacyDataFile.getDescription());
 
         LegacyImportData data = objectMapper.readValue(
                 legacyDataFile.getInputStream(),
@@ -61,6 +120,13 @@ public class LegacyDataImporter implements ApplicationRunner {
         importJourneyLocations(data.journeys());
         syncIdentitySequence("locations");
         syncIdentitySequence("journeys");
+        configuration.setStarterDataSeededAt(Instant.now());
+        appConfigurationRepository.save(configuration);
+
+        LOGGER.info(
+                "Legacy starter data import completed successfully (locationsImported={}, journeysImported={}).",
+                data.locations().size(),
+                data.journeys().size());
     }
 
     private void importLocations(List<LegacyLocation> legacyLocations) {

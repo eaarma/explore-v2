@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { LocationManager } from "@maplibre/maplibre-react-native";
+import * as ExpoLocation from "expo-location";
 
 export type UserCoordinates = {
   latitude: number;
@@ -19,7 +19,10 @@ export type ResolvedUserCoordinatesResult = {
 export function useResolvedUserCoordinates() {
   return useCallback(async (): Promise<ResolvedUserCoordinatesResult> => {
     try {
-      const granted = await LocationManager.requestPermissions();
+      const permissionResponse =
+        await ExpoLocation.requestForegroundPermissionsAsync();
+      const granted =
+        permissionResponse.status === ExpoLocation.PermissionStatus.GRANTED;
 
       if (!granted) {
         return {
@@ -28,7 +31,10 @@ export function useResolvedUserCoordinates() {
         };
       }
 
-      const position = await LocationManager.getCurrentPosition();
+      const position = await ExpoLocation.getCurrentPositionAsync({
+        accuracy: ExpoLocation.Accuracy.Highest,
+        mayShowUserSettingsDialog: true,
+      });
 
       if (!position) {
         return {

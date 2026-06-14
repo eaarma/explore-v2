@@ -2,6 +2,8 @@ package com.explore.app.locations.repository;
 
 import com.explore.app.locations.model.Location;
 import com.explore.app.locations.model.LocationStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -18,17 +20,23 @@ public interface LocationRepository extends JpaRepository<Location, Long> {
         Double getDistanceMeters();
     }
 
-    List<Location> findByStatus(LocationStatus status);
+    Page<Location> findByStatusOrderByCreatedAtDescIdDesc(LocationStatus status, Pageable pageable);
 
     Optional<Location> findByIdAndStatus(Long id, LocationStatus status);
 
-    List<Location> findByCategoryIgnoreCase(String category);
+    Page<Location> findByCategoryIgnoreCaseOrderByCreatedAtDescIdDesc(String category, Pageable pageable);
 
-    List<Location> findByCategoryIgnoreCaseAndStatus(String category, LocationStatus status);
+    Page<Location> findByCategoryIgnoreCaseAndStatusOrderByCreatedAtDescIdDesc(
+            String category,
+            LocationStatus status,
+            Pageable pageable);
 
-    List<Location> findByCountyIgnoreCase(String county);
+    Page<Location> findByCountyIgnoreCaseOrderByCreatedAtDescIdDesc(String county, Pageable pageable);
 
-    List<Location> findByCountyIgnoreCaseAndStatus(String county, LocationStatus status);
+    Page<Location> findByCountyIgnoreCaseAndStatusOrderByCreatedAtDescIdDesc(
+            String county,
+            LocationStatus status,
+            Pageable pageable);
 
     @Query(value = """
             SELECT
@@ -54,6 +62,41 @@ public interface LocationRepository extends JpaRepository<Location, Long> {
             @Param("longitude") double longitude,
             @Param("radiusMeters") double radiusMeters,
             @Param("status") String status);
+
+    @Query(value = """
+            SELECT l.*
+            FROM locations l
+            WHERE l.status = :status
+              AND l.point IS NOT NULL
+              AND ST_DWithin(
+                    l.point,
+                    ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography,
+                    :radiusMeters
+              )
+            ORDER BY ST_Distance(
+                    l.point,
+                    ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography
+                ) ASC,
+                l.id ASC
+            """,
+            countQuery = """
+                    SELECT COUNT(*)
+                    FROM locations l
+                    WHERE l.status = :status
+                      AND l.point IS NOT NULL
+                      AND ST_DWithin(
+                            l.point,
+                            ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography,
+                            :radiusMeters
+                      )
+                    """,
+            nativeQuery = true)
+    Page<Location> findNearbyByStatus(
+            @Param("latitude") double latitude,
+            @Param("longitude") double longitude,
+            @Param("radiusMeters") double radiusMeters,
+            @Param("status") String status,
+            Pageable pageable);
 }
 
 

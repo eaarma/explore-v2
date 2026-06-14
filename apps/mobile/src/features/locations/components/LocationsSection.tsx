@@ -1,13 +1,11 @@
 import {
   startTransition,
-  useDeferredValue,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
 import { useRouter } from "expo-router";
-import { TextInput, View } from "react-native";
 
 import { useAuthStore } from "@/src/features/auth/store/authStore";
 import {
@@ -49,6 +47,7 @@ import {
   type UserCoordinates,
   useResolvedUserCoordinates,
 } from "@/src/shared/hooks/useResolvedUserCoordinates";
+import { useDeferredSearchQuery } from "@/src/shared/hooks/useDeferredSearchQuery";
 import { useContentSyncStore } from "@/src/shared/store/contentSyncStore";
 import {
   calculateDistanceKm,
@@ -56,6 +55,7 @@ import {
   normalizeCounty,
   normalizeSearchValue,
 } from "@/src/shared/utils/browseSectionUtils";
+import { toggleValueInArray } from "@/src/shared/utils/selectionUtils";
 
 const LOCATION_VIEW_TABS = [
   { key: "nearby", label: "Nearby" },
@@ -118,6 +118,13 @@ export function LocationsSection() {
     (state) => state.markUpdated,
   );
   const contentRevision = useContentSyncStore((state) => state.revision);
+  const {
+    searchQuery,
+    setSearchQuery,
+    searchInputRef,
+    activeSearchQuery,
+    clearSearchQuery,
+  } = useDeferredSearchQuery();
   const [locationView, setLocationView] = useState<LocationViewKey>("nearby");
   const [nearbyMode, setNearbyMode] = useState<NearbyMode>("radius");
   const [locations, setLocations] = useState<Location[]>([]);
@@ -127,12 +134,6 @@ export function LocationsSection() {
     useState<LocationPermissionState>("loading");
   const [userCoordinates, setUserCoordinates] =
     useState<UserCoordinates | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const searchInputRef = useRef<TextInput | null>(null);
-  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
-  const deferredSearchQuery = useDeferredValue(normalizedSearchQuery);
-  const activeSearchQuery =
-    normalizedSearchQuery.length === 0 ? normalizedSearchQuery : deferredSearchQuery;
   const [selectedRange, setSelectedRange] = useState<RangeValue>(25);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [nearbySortBy, setNearbySortBy] = useState<NearbySortKey>("distance");
@@ -146,13 +147,17 @@ export function LocationsSection() {
   const [activeToggleLocationId, setActiveToggleLocationId] = useState<
     number | null
   >(null);
+  const resolveUserCoordinatesRef = useRef(resolveUserCoordinates);
+  const locationsRef = useRef(locations);
+  resolveUserCoordinatesRef.current = resolveUserCoordinates;
+  locationsRef.current = locations;
 
   useEffect(() => {
     let isMounted = true;
 
     async function loadLocationsScreenData() {
       setIsLoadingLocations(true);
-      const positionPromise = resolveUserCoordinates();
+      const positionPromise = resolveUserCoordinatesRef.current();
 
       try {
         await initializeContentCache();
@@ -260,12 +265,15 @@ export function LocationsSection() {
   useEffect(() => {
     let isMounted = true;
 
-    async function syncActiveLocationFlags() {
-      if (!user?.id || locations.length === 0) {
+    async function syncLocationFlags() {
+      if (!user?.id || locationsRef.current.length === 0) {
         return;
       }
 
-      const nextLocations = await hydrateLocationsWithProgress(user.id, locations);
+      const nextLocations = await hydrateLocationsWithProgress(
+        user.id,
+        locationsRef.current,
+      );
 
       if (!isMounted) {
         return;
@@ -276,7 +284,7 @@ export function LocationsSection() {
       });
     }
 
-    void syncActiveLocationFlags();
+    void syncLocationFlags();
 
     return () => {
       isMounted = false;
@@ -359,11 +367,7 @@ export function LocationsSection() {
     nearbyMode === "browse" ? BROWSE_SORT_OPTIONS : NEARBY_SORT_OPTIONS;
 
   function toggleCategory(category: string) {
-    setSelectedCategories((current) =>
-      current.includes(category)
-        ? current.filter((item) => item !== category)
-        : [...current, category],
-    );
+    setSelectedCategories((current) => toggleValueInArray(current, category));
   }
 
   function toggleCounty(county: string) {
@@ -441,14 +445,6 @@ export function LocationsSection() {
         currentLocationId === location.id ? null : currentLocationId,
       );
     }
-  }
-
-  function clearSearchQuery() {
-    setSearchQuery("");
-
-    requestAnimationFrame(() => {
-      searchInputRef.current?.focus();
-    });
   }
 
   const sharedHeaderControls = (

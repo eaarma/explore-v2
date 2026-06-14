@@ -6,8 +6,8 @@ import {
   View,
 } from "react-native";
 
+import { useResolvedAppConfiguration } from "@/src/features/appConfig/useResolvedAppConfiguration";
 import { DEFAULT_OFFLINE_ROAD_MAP_LABEL } from "@/src/features/map/storage/defaultOfflineRoadMap";
-import { useAppSettingsStore } from "@/src/features/settings/store/appSettingsStore";
 import type {
   SettingsScreenColors,
   SettingsScreenStyles,
@@ -65,7 +65,7 @@ type SettingRowProps = SharedSectionProps & {
 export function SettingsHeroCard({
   styles,
 }: SharedSectionProps) {
-  const appTitle = useAppSettingsStore((state) => state.appTitle);
+  const { appTitle } = useResolvedAppConfiguration();
 
   return (
     <View style={styles.heroCard}>

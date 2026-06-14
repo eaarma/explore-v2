@@ -12,11 +12,12 @@ import com.explore.app.journeys.dto.JourneyResponse;
 import com.explore.app.journeys.dto.JourneyUpdateRequest;
 import com.explore.app.locations.model.LocationStatus;
 import com.explore.app.shared.CategoryNormalizer;
+import com.explore.app.shared.NotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -25,13 +26,19 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class JourneyService {
 
+    public static final int DEFAULT_PAGE_SIZE = 100;
+
     private final JourneyRepository journeyRepository;
     private final JourneyLocationRepository journeyLocationRepository;
     private final JourneyMapper journeyMapper;
     private final JourneyLocationMapper journeyLocationMapper;
 
     public List<JourneyResponse> getPublicJourneys() {
-        return getActiveJourneys();
+        return getPublicJourneys(0, DEFAULT_PAGE_SIZE);
+    }
+
+    public List<JourneyResponse> getPublicJourneys(int page, int size) {
+        return getActiveJourneys(page, size);
     }
 
     public JourneyResponse getPublicJourneyById(Long id) {
@@ -39,34 +46,55 @@ public class JourneyService {
     }
 
     public List<JourneyResponse> getPublicJourneysByCategory(String category) {
-        return journeyRepository.findByCategoryIgnoreCaseAndStatus(
+        return getPublicJourneysByCategory(category, 0, DEFAULT_PAGE_SIZE);
+    }
+
+    public List<JourneyResponse> getPublicJourneysByCategory(String category, int page, int size) {
+        return journeyRepository.findByCategoryIgnoreCaseAndStatusOrderByCreatedAtDescIdDesc(
                         normalizeCategoryFilter(category),
-                        JourneyStatus.ACTIVE)
+                        JourneyStatus.ACTIVE,
+                        createPageRequest(page, size))
+                .getContent()
                 .stream()
                 .map(journeyMapper::toResponse)
                 .toList();
     }
 
     public List<JourneyResponse> getPublicJourneysByCounty(String county) {
-        return journeyRepository.findByCountyIgnoreCaseAndStatus(
+        return getPublicJourneysByCounty(county, 0, DEFAULT_PAGE_SIZE);
+    }
+
+    public List<JourneyResponse> getPublicJourneysByCounty(String county, int page, int size) {
+        return journeyRepository.findByCountyIgnoreCaseAndStatusOrderByCreatedAtDescIdDesc(
                         normalizeFilter(county, "county"),
-                        JourneyStatus.ACTIVE)
+                        JourneyStatus.ACTIVE,
+                        createPageRequest(page, size))
+                .getContent()
                 .stream()
                 .map(journeyMapper::toResponse)
                 .toList();
     }
 
     public List<JourneyResponse> getPublicNearbyJourneys(double latitude, double longitude, double radiusMeters) {
+        return getPublicNearbyJourneys(latitude, longitude, radiusMeters, 0, DEFAULT_PAGE_SIZE);
+    }
+
+    public List<JourneyResponse> getPublicNearbyJourneys(
+            double latitude,
+            double longitude,
+            double radiusMeters,
+            int page,
+            int size) {
         validateRadius(radiusMeters);
 
-        return journeyRepository.findByStatus(JourneyStatus.ACTIVE)
-                .stream()
-                .filter(journey -> journey.getLatitude() != null && journey.getLongitude() != null)
-                .filter(journey -> haversineMeters(
+        return journeyRepository.findNearbyByStatus(
                         latitude,
                         longitude,
-                        journey.getLatitude(),
-                        journey.getLongitude()) <= radiusMeters)
+                        radiusMeters,
+                        JourneyStatus.ACTIVE.name(),
+                        createPageRequest(page, size))
+                .getContent()
+                .stream()
                 .map(journeyMapper::toResponse)
                 .toList();
     }
@@ -83,10 +111,7 @@ public class JourneyService {
     }
 
     public List<JourneyResponse> getAllJourneys() {
-        return journeyRepository.findAll()
-                .stream()
-                .map(journeyMapper::toResponse)
-                .toList();
+        return getPublicJourneys();
     }
 
     public JourneyResponse getJourneyById(Long id) {
@@ -94,39 +119,49 @@ public class JourneyService {
     }
 
     public List<JourneyResponse> getActiveJourneys() {
-        return journeyRepository.findByStatus(JourneyStatus.ACTIVE)
+        return getActiveJourneys(0, DEFAULT_PAGE_SIZE);
+    }
+
+    public List<JourneyResponse> getActiveJourneys(int page, int size) {
+        return journeyRepository.findByStatusOrderByCreatedAtDescIdDesc(
+                        JourneyStatus.ACTIVE,
+                        createPageRequest(page, size))
+                .getContent()
                 .stream()
                 .map(journeyMapper::toResponse)
                 .toList();
     }
 
     public List<JourneyResponse> getJourneysByCategory(String category) {
-        return journeyRepository.findByCategoryIgnoreCase(normalizeCategoryFilter(category))
+        return getJourneysByCategory(category, 0, DEFAULT_PAGE_SIZE);
+    }
+
+    public List<JourneyResponse> getJourneysByCategory(String category, int page, int size) {
+        return journeyRepository.findByCategoryIgnoreCaseOrderByCreatedAtDescIdDesc(
+                        normalizeCategoryFilter(category),
+                        createPageRequest(page, size))
+                .getContent()
                 .stream()
                 .map(journeyMapper::toResponse)
                 .toList();
     }
 
     public List<JourneyResponse> getJourneysByCounty(String county) {
-        return journeyRepository.findByCountyIgnoreCase(normalizeFilter(county, "county"))
+        return getJourneysByCounty(county, 0, DEFAULT_PAGE_SIZE);
+    }
+
+    public List<JourneyResponse> getJourneysByCounty(String county, int page, int size) {
+        return journeyRepository.findByCountyIgnoreCaseOrderByCreatedAtDescIdDesc(
+                        normalizeFilter(county, "county"),
+                        createPageRequest(page, size))
+                .getContent()
                 .stream()
                 .map(journeyMapper::toResponse)
                 .toList();
     }
 
     public List<JourneyResponse> getNearbyJourneys(double latitude, double longitude, double radiusMeters) {
-        validateRadius(radiusMeters);
-
-        return journeyRepository.findAll()
-                .stream()
-                .filter(journey -> journey.getLatitude() != null && journey.getLongitude() != null)
-                .filter(journey -> haversineMeters(
-                        latitude,
-                        longitude,
-                        journey.getLatitude(),
-                        journey.getLongitude()) <= radiusMeters)
-                .map(journeyMapper::toResponse)
-                .toList();
+        return getPublicNearbyJourneys(latitude, longitude, radiusMeters);
     }
 
     public JourneyDetailResponse getJourneyWithLocations(Long journeyId) {
@@ -160,12 +195,12 @@ public class JourneyService {
 
     private Journey findJourney(Long id) {
         return journeyRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Journey not found"));
+                .orElseThrow(() -> new NotFoundException("Journey not found"));
     }
 
     private Journey findActiveJourney(Long id) {
         return journeyRepository.findByIdAndStatus(id, JourneyStatus.ACTIVE)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Journey not found"));
+                .orElseThrow(() -> new NotFoundException("Journey not found"));
     }
 
     private String normalizeFilter(String value, String fieldName) {
@@ -186,17 +221,8 @@ public class JourneyService {
         }
     }
 
-    private double haversineMeters(double latitude1, double longitude1, double latitude2, double longitude2) {
-        double earthRadiusMeters = 6_371_000d;
-        double latitudeDelta = Math.toRadians(latitude2 - latitude1);
-        double longitudeDelta = Math.toRadians(longitude2 - longitude1);
-
-        double a = Math.sin(latitudeDelta / 2) * Math.sin(latitudeDelta / 2)
-                + Math.cos(Math.toRadians(latitude1)) * Math.cos(Math.toRadians(latitude2))
-                * Math.sin(longitudeDelta / 2) * Math.sin(longitudeDelta / 2);
-
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return earthRadiusMeters * c;
+    private Pageable createPageRequest(int page, int size) {
+        return PageRequest.of(page, size);
     }
 }
 

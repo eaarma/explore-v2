@@ -17,18 +17,8 @@ import {
   createPointFeatureCollection,
   isCategoryVisible,
 } from "@/src/features/map/utils/mapFeatureCollection";
-import {
-  buildMapSearchResults,
-  type MapSearchResult,
-} from "@/src/features/map/utils/mapSearch";
-import {
-  buildMapScaleIndicator,
-  getMapSelectionKey,
-  normalizeMapBearing,
-} from "@/src/features/map/utils/mapView";
-
-const MAP_ROTATION_EPSILON = 1;
-const SCALE_BAR_MAX_WIDTH = 96;
+import { buildMapSearchResults } from "@/src/features/map/utils/mapSearch";
+import { getMapSelectionKey } from "@/src/features/map/utils/mapView";
 
 export type MapScreenTarget =
   | {
@@ -46,9 +36,6 @@ type UseMapScreenModelOptions = {
   categoryVisibility: Record<string, boolean>;
   journeys: Journey[];
   locations: Location[];
-  mapBearing: number;
-  mapCenterLatitude: number;
-  mapZoom: number;
   overlayVisibility: Record<MapOverlayKey, boolean>;
   searchQuery: string;
   selectedJourneyMapContext: SelectedJourneyMapContext | null;
@@ -63,9 +50,6 @@ export function useMapScreenModel({
   categoryVisibility,
   journeys,
   locations,
-  mapBearing,
-  mapCenterLatitude,
-  mapZoom,
   overlayVisibility,
   searchQuery,
   selectedJourneyMapContext,
@@ -170,16 +154,6 @@ export function useMapScreenModel({
     ],
   );
 
-  const normalizedMapBearing = useMemo(
-    () => normalizeMapBearing(mapBearing),
-    [mapBearing],
-  );
-
-  const shouldShowCompass = useMemo(
-    () => Math.abs(normalizedMapBearing) >= MAP_ROTATION_EPSILON,
-    [normalizedMapBearing],
-  );
-
   const allCategoriesEnabled = useMemo(
     () =>
       availableCategories.every((category) =>
@@ -242,12 +216,6 @@ export function useMapScreenModel({
     return activeToggleTargetKey === getMapSelectionKey(selectedMapItem);
   }, [activeToggleTargetKey, selectedMapItem]);
 
-  const mapScale = useMemo(
-    () =>
-      buildMapScaleIndicator(mapCenterLatitude, mapZoom, SCALE_BAR_MAX_WIDTH),
-    [mapCenterLatitude, mapZoom],
-  );
-
   const mapSearchResults = useMemo(() => {
     const normalizedSearchQuery = searchQuery.trim().toLowerCase();
 
@@ -270,11 +238,8 @@ export function useMapScreenModel({
       enabledCategoryCount !== availableCategories.length,
     journeyGeoJson,
     locationGeoJson,
-    mapScale,
     mapSearchResults,
-    normalizedMapBearing,
     selectedMapItem,
-    shouldShowCompass,
     visibleJourneysById,
     visibleLocationsById,
   };

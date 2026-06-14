@@ -8,7 +8,7 @@ import {
   View,
 } from "react-native";
 
-import { CameraRef, LocationManager } from "@maplibre/maplibre-react-native";
+import { CameraRef } from "@maplibre/maplibre-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuthStore } from "@/src/features/auth/store/authStore";
 import {
@@ -28,6 +28,7 @@ import { useMapContent } from "@/src/features/map/hooks/useMapContent";
 import { useMapDiscoverySync } from "@/src/features/map/hooks/useMapDiscoverySync";
 import { useMapLocationPermission } from "@/src/features/map/hooks/useMapLocationPermission";
 import { useSelectedJourneyMapContext } from "@/src/features/map/hooks/useSelectedJourneyMapContext";
+import { useMapViewportUi } from "@/src/features/map/hooks/useMapViewportUi";
 import {
   useMapScreenModel,
   type MapScreenTarget,
@@ -65,6 +66,8 @@ import {
 } from "@/src/features/map/mapConfig";
 import { getActiveStateColors } from "@/src/shared/constants/activeStateColors";
 
+const VIEWPORT_UI_UPDATE_INTERVAL_MS = 120;
+
 export function MapScreen() {
   const navigation = useNavigation();
   const router = useRouter();
@@ -99,6 +102,13 @@ export function MapScreen() {
   const lastAppliedCameraFocusAtRef = useRef<string | null>(null);
   const lastAppliedSelectionFocusAtRef = useRef<string | null>(null);
   const lastAppliedJourneyBoundsRequestKeyRef = useRef<string | null>(null);
+  const viewportUiCommitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const lastViewportUiCommitAtRef = useRef(0);
+  const mapBearingRef = useRef(0);
+  const mapZoomRef = useRef(7);
+  const mapCenterLatitudeRef = useRef(DEFAULT_MAP_CENTER[1]);
   const { focusLatitude, focusLongitude, focusAt, focusKind, focusItemId } =
     useLocalSearchParams<{
       focusLatitude?: string;
@@ -113,6 +123,7 @@ export function MapScreen() {
     ensureLocationPermission,
     latestPosition,
     locationPermissionGranted,
+    refreshCurrentPosition,
   } = useMapLocationPermission();
   const {
     isMapDataLoading,
@@ -140,11 +151,11 @@ export function MapScreen() {
     useState<MapBottomSheetState>("hidden");
   const [activeToolPanel, setActiveToolPanel] = useState<ActiveToolPanel>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [mapBearing, setMapBearing] = useState(0);
-  const [mapZoom, setMapZoom] = useState(7);
-  const [mapCenterLatitude, setMapCenterLatitude] = useState(
-    DEFAULT_MAP_CENTER[1],
-  );
+  const [viewportUiState, setViewportUiState] = useState({
+    mapBearing: 0,
+    mapZoom: 7,
+    mapCenterLatitude: DEFAULT_MAP_CENTER[1],
+  });
   const [categoryVisibility, setCategoryVisibility] = useState<
     Record<string, boolean>
   >({});
@@ -171,6 +182,20 @@ export function MapScreen() {
     selectedTarget?.kind === "journey" && bottomSheetState !== "hidden"
       ? selectedTarget.id
       : null;
+  const userCoordinates = useMemo(() => {
+    const preferredPosition = currentPosition ?? latestPosition;
+    const latitude = Number(preferredPosition?.coords.latitude);
+    const longitude = Number(preferredPosition?.coords.longitude);
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      return null;
+    }
+
+    return {
+      latitude,
+      longitude,
+    };
+  }, [currentPosition, latestPosition]);
 
   const locationsById = useMemo(
     () =>
@@ -194,7 +219,7 @@ export function MapScreen() {
   const { discoveryBanner, showDiscoveryBanner } = useMapDiscoverySync({
     authStatus,
     authUser,
-    currentPosition,
+    currentPosition: latestPosition,
     journeys,
     journeysById,
     locationPermissionGranted,
@@ -206,6 +231,11 @@ export function MapScreen() {
     setLocations,
   });
   const {
+    mapScale,
+    normalizedMapBearing,
+    shouldShowCompass,
+  } = useMapViewportUi(viewportUiState);
+  const {
     allCategoriesEnabled,
     availableCategories,
     enabledCategoryCount,
@@ -215,11 +245,8 @@ export function MapScreen() {
     isCategoryFilterModified,
     journeyGeoJson,
     locationGeoJson,
-    mapScale,
     mapSearchResults,
-    normalizedMapBearing,
     selectedMapItem,
-    shouldShowCompass,
     visibleJourneysById,
     visibleLocationsById,
   } = useMapScreenModel({
@@ -228,9 +255,6 @@ export function MapScreen() {
     categoryVisibility,
     journeys,
     locations,
-    mapBearing,
-    mapCenterLatitude,
-    mapZoom,
     overlayVisibility,
     searchQuery,
     selectedJourneyMapContext,
@@ -540,6 +564,14 @@ export function MapScreen() {
     }
   }, [selectedMapItem, selectedTarget]);
 
+  useEffect(() => {
+    return () => {
+      if (viewportUiCommitTimeoutRef.current) {
+        clearTimeout(viewportUiCommitTimeoutRef.current);
+      }
+    };
+  }, []);
+
   async function centerToUser() {
     const hasPermission = await ensureLocationPermission();
 
@@ -549,7 +581,7 @@ export function MapScreen() {
 
     const resolvedPosition =
       latestPosition ??
-      (await LocationManager.getCurrentPosition()) ??
+      (await refreshCurrentPosition()) ??
       currentPosition;
 
     if (!resolvedPosition) {
@@ -644,7 +676,58 @@ export function MapScreen() {
     }
   }
 
-  function handleMapRegionChange(
+  function commitViewportUiState() {
+    lastViewportUiCommitAtRef.current = Date.now();
+
+    setViewportUiState((currentViewportUiState) => {
+      if (
+        currentViewportUiState.mapBearing === mapBearingRef.current &&
+        currentViewportUiState.mapZoom === mapZoomRef.current &&
+        currentViewportUiState.mapCenterLatitude ===
+          mapCenterLatitudeRef.current
+      ) {
+        return currentViewportUiState;
+      }
+
+      return {
+        mapBearing: mapBearingRef.current,
+        mapZoom: mapZoomRef.current,
+        mapCenterLatitude: mapCenterLatitudeRef.current,
+      };
+    });
+  }
+
+  function scheduleViewportUiCommit(options?: { force?: boolean }) {
+    const force = options?.force === true;
+
+    if (force) {
+      if (viewportUiCommitTimeoutRef.current) {
+        clearTimeout(viewportUiCommitTimeoutRef.current);
+        viewportUiCommitTimeoutRef.current = null;
+      }
+
+      commitViewportUiState();
+      return;
+    }
+
+    const elapsedMs = Date.now() - lastViewportUiCommitAtRef.current;
+
+    if (elapsedMs >= VIEWPORT_UI_UPDATE_INTERVAL_MS) {
+      commitViewportUiState();
+      return;
+    }
+
+    if (viewportUiCommitTimeoutRef.current) {
+      return;
+    }
+
+    viewportUiCommitTimeoutRef.current = setTimeout(() => {
+      viewportUiCommitTimeoutRef.current = null;
+      commitViewportUiState();
+    }, VIEWPORT_UI_UPDATE_INTERVAL_MS - elapsedMs);
+  }
+
+  function updateViewportRefs(
     event: NativeSyntheticEvent<ViewStateChangeEvent>,
   ) {
     const nextBearing = Number(event.nativeEvent.bearing);
@@ -652,22 +735,36 @@ export function MapScreen() {
     const nextCenterLatitude = Number(event.nativeEvent.center?.[1]);
 
     if (Number.isFinite(nextBearing)) {
-      setMapBearing(nextBearing);
+      mapBearingRef.current = nextBearing;
     }
 
     if (Number.isFinite(nextZoom)) {
-      setMapZoom(nextZoom);
+      mapZoomRef.current = nextZoom;
     }
 
     if (Number.isFinite(nextCenterLatitude)) {
-      setMapCenterLatitude(nextCenterLatitude);
+      mapCenterLatitudeRef.current = nextCenterLatitude;
     }
+  }
+
+  function handleMapRegionDidChange(
+    event: NativeSyntheticEvent<ViewStateChangeEvent>,
+  ) {
+    updateViewportRefs(event);
+    scheduleViewportUiCommit({ force: true });
+  }
+
+  function handleMapRegionChanging(
+    event: NativeSyntheticEvent<ViewStateChangeEvent>,
+  ) {
+    updateViewportRefs(event);
+    scheduleViewportUiCommit();
   }
 
   function focusMapSearchResult(result: MapSearchResult) {
     cameraRef.current?.setStop({
       center: [result.longitude, result.latitude],
-      zoom: Math.max(mapZoom, 14),
+      zoom: Math.max(mapZoomRef.current, 14),
       duration: 700,
     });
     setSelectedTarget({
@@ -861,10 +958,12 @@ export function MapScreen() {
         onLocationSourcePress={handleLocationSourcePress}
         onMapPress={handleMapPress}
         onMapReady={() => setIsMapReady(true)}
-        onMapRegionChange={handleMapRegionChange}
+        onMapRegionChangeComplete={handleMapRegionDidChange}
+        onMapRegionChanging={handleMapRegionChanging}
         overlayVisibility={overlayVisibility}
         resolvedMapStyle={resolvedMapStyle}
         roadLabelLayerId={roadLabelLayerId}
+        userPosition={latestPosition ?? currentPosition}
       />
       <MapSearchOverlay
         visible={activeToolPanel === "search"}
@@ -1087,6 +1186,7 @@ export function MapScreen() {
         onOpenDetails={handleOpenDetails}
         onToggleActive={handleToggleActive}
         onRequestClose={() => setBottomSheetState("hidden")}
+        userCoordinates={userCoordinates}
       />
     </View>
   );

@@ -11,6 +11,10 @@ import com.explore.app.journeys.dto.JourneyTraitRequest;
 import com.explore.app.journeys.dto.JourneyTraitResponse;
 import com.explore.app.journeys.dto.JourneyUpdateRequest;
 import com.explore.app.shared.CategoryNormalizer;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -22,12 +26,15 @@ import java.util.Set;
 @Component
 public class JourneyMapper {
 
+    private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory(new PrecisionModel(), 4326);
+
     public Journey toEntity(JourneyCreateRequest request) {
         Journey journey = Journey.builder()
                 .title(normalizeRequired(request.getTitle(), "title"))
                 .description(normalizeOptional(request.getDescription()))
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
+                .point(createPoint(request.getLatitude(), request.getLongitude()))
                 .county(normalizeOptional(request.getCounty()))
                 .category(CategoryNormalizer.normalizeOptionalCategory(request.getCategory()))
                 .experience(request.getExperience())
@@ -95,6 +102,8 @@ public class JourneyMapper {
         if (request.getStatus() != null) {
             journey.setStatus(toStatus(request.getStatus()));
         }
+
+        journey.setPoint(createPoint(journey.getLatitude(), journey.getLongitude()));
     }
 
     public JourneyResponse toResponse(Journey journey) {
@@ -102,8 +111,8 @@ public class JourneyMapper {
                 .id(journey.getId())
                 .title(journey.getTitle())
                 .description(journey.getDescription())
-                .latitude(journey.getLatitude())
-                .longitude(journey.getLongitude())
+                .latitude(resolveLatitude(journey))
+                .longitude(resolveLongitude(journey))
                 .county(journey.getCounty())
                 .category(CategoryNormalizer.normalizeOptionalCategory(journey.getCategory()))
                 .experience(journey.getExperience())
@@ -123,8 +132,8 @@ public class JourneyMapper {
                 .id(journey.getId())
                 .title(journey.getTitle())
                 .description(journey.getDescription())
-                .latitude(journey.getLatitude())
-                .longitude(journey.getLongitude())
+                .latitude(resolveLatitude(journey))
+                .longitude(resolveLongitude(journey))
                 .county(journey.getCounty())
                 .category(CategoryNormalizer.normalizeOptionalCategory(journey.getCategory()))
                 .experience(journey.getExperience())
@@ -142,6 +151,40 @@ public class JourneyMapper {
 
     public JourneyStatus toStatus(Integer status) {
         return JourneyStatus.fromCode(status);
+    }
+
+    private Point createPoint(Double latitude, Double longitude) {
+        if (latitude == null || longitude == null) {
+            return null;
+        }
+
+        return GEOMETRY_FACTORY.createPoint(new Coordinate(longitude, latitude));
+    }
+
+    private Double resolveLatitude(Journey journey) {
+        if (journey == null) {
+            return null;
+        }
+
+        if (journey.getLatitude() != null) {
+            return journey.getLatitude();
+        }
+
+        Point point = journey.getPoint();
+        return point != null ? point.getY() : null;
+    }
+
+    private Double resolveLongitude(Journey journey) {
+        if (journey == null) {
+            return null;
+        }
+
+        if (journey.getLongitude() != null) {
+            return journey.getLongitude();
+        }
+
+        Point point = journey.getPoint();
+        return point != null ? point.getX() : null;
     }
 
     private List<JourneyTraitResponse> resolveTraits(Journey journey) {

@@ -3,6 +3,7 @@ import { Redirect } from "expo-router";
 import { ScrollView, StyleSheet, View } from "react-native";
 
 import { AdminCustomizeSection } from "@/src/features/admin/components/AdminCustomizeSection";
+import { AdminOperationsSection } from "@/src/features/admin/components/AdminOperationsSection";
 import { AdminJourneysSection } from "@/src/features/admin/components/AdminJourneysSection";
 import { AdminLocationsSection } from "@/src/features/admin/components/AdminLocationsSection";
 import { AdminUsersSection } from "@/src/features/admin/components/AdminUsersSection";
@@ -95,6 +96,14 @@ export function AdminUsersScreen() {
     <AdminSectionScreen
       renderSection={(colors) => <AdminUsersSection colors={colors} />}
       scrollable={false}
+    />
+  );
+}
+
+export function AdminOperationsScreen() {
+  return (
+    <AdminSectionScreen
+      renderSection={(colors) => <AdminOperationsSection colors={colors} />}
     />
   );
 }

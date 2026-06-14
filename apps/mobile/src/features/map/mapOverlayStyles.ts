@@ -324,7 +324,8 @@ export const hikingTrailLabelLayout = {
   "text-letter-spacing": 0.02,
   "text-max-angle": 35,
   "text-keep-upright": true,
-  "text-ignore-placement": true,
+  "text-allow-overlap": false,
+  "text-ignore-placement": false,
 } as any;
 
 export const hikingTrailLabelPaint = {

@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useMemo,
   useState,
 } from "react";
 import {
@@ -10,14 +11,20 @@ import {
   View,
 } from "react-native";
 
-import {
-  getAdminDatabaseBackupStatus,
-  triggerAdminDatabaseBackup,
-  type AdminDatabaseBackupStatus,
-} from "@/src/features/admin/api/adminDatabaseBackupApi";
+import { AdminLegalDocumentEditor } from "@/src/features/admin/components/AdminLegalDocumentEditor";
 import { type AdminColors } from "@/src/features/admin/utils/adminScreenTheme";
+import {
+  getAdminAppConfiguration,
+  updateAdminAppConfiguration,
+} from "@/src/features/appConfig/appConfigApi";
+import { useAppConfigurationStore } from "@/src/features/appConfig/appConfigStore";
+import { useResolvedAppConfiguration } from "@/src/features/appConfig/useResolvedAppConfiguration";
+import {
+  buildPrivacyPolicyDocument,
+  buildTermsDocument,
+} from "@/src/features/settings/content/legalDocuments";
+import type { SettingsDocument } from "@/src/features/settings/components/SettingsDocumentContent";
 import { getApiErrorMessage } from "@/src/shared/api/apiError";
-import { useAppSettingsStore } from "@/src/features/settings/store/appSettingsStore";
 import { showAppToast } from "@/src/shared/store/appFeedbackStore";
 
 type AdminCustomizeSectionProps = {
@@ -29,11 +36,6 @@ const CUSTOMIZE_SECTION_OPTIONS = [
     key: "main",
     label: "Main",
     description: "General app-facing text and shared customization settings.",
-  },
-  {
-    key: "operations",
-    label: "Operations",
-    description: "Maintenance tasks, backup status, and manual system actions.",
   },
   {
     key: "privacy-policy",
@@ -49,60 +51,60 @@ const CUSTOMIZE_SECTION_OPTIONS = [
 
 type CustomizeSectionKey = (typeof CUSTOMIZE_SECTION_OPTIONS)[number]["key"];
 
-const PLACEHOLDER_SECTION_CONTENT: Record<
-  Exclude<CustomizeSectionKey, "main" | "operations">,
-  {
-    eyebrow: string;
-    title: string;
-    description: string;
-    items: string[];
-  }
-> = {
-  "privacy-policy": {
-    eyebrow: "Privacy policy",
-    title: "Privacy policy customization",
-    description:
-      "Placeholder area for managing privacy policy text, revisions, and contact details.",
-    items: [
-      "Privacy policy body editor placeholder",
-      "Privacy policy last-updated/version placeholder",
-      "Privacy policy contact email placeholder",
-    ],
-  },
-  "terms-and-services": {
-    eyebrow: "Terms and services",
-    title: "Terms and services customization",
-    description:
-      "Placeholder area for managing Terms of Service content and future legal updates.",
-    items: [
-      "Terms body editor placeholder",
-      "Terms last-updated/version placeholder",
-      "Terms contact email placeholder",
-    ],
-  },
-};
-
 export function AdminCustomizeSection({
   colors,
 }: AdminCustomizeSectionProps) {
-  const appTitle = useAppSettingsStore((state) => state.appTitle);
-  const contactEmail = useAppSettingsStore((state) => state.contactEmail);
-  const setBrandingSettings = useAppSettingsStore(
-    (state) => state.setBrandingSettings,
+  const setConfiguration = useAppConfigurationStore(
+    (state) => state.setConfiguration,
   );
+  const {
+    appTitle,
+    contactEmail,
+    privacyPolicyVersion,
+    termsVersion,
+    privacyPolicyDocument,
+    termsDocument,
+  } = useResolvedAppConfiguration();
   const [activeSection, setActiveSection] =
     useState<CustomizeSectionKey>("main");
   const [pendingAppTitle, setPendingAppTitle] = useState(appTitle);
   const [pendingContactEmail, setPendingContactEmail] = useState(contactEmail);
   const [mainError, setMainError] = useState<string | null>(null);
   const [isSavingMain, setIsSavingMain] = useState(false);
-  const [backupStatus, setBackupStatus] =
-    useState<AdminDatabaseBackupStatus | null>(null);
-  const [backupStatusError, setBackupStatusError] = useState<string | null>(
+  const [configurationError, setConfigurationError] = useState<string | null>(
     null,
   );
-  const [isLoadingBackupStatus, setIsLoadingBackupStatus] = useState(false);
-  const [isTriggeringBackup, setIsTriggeringBackup] = useState(false);
+  const [isRefreshingConfiguration, setIsRefreshingConfiguration] =
+    useState(false);
+
+  const defaultPrivacyPolicyDocument = useMemo(
+    () =>
+      buildPrivacyPolicyDocument({
+        appTitle,
+        contactEmail,
+      }),
+    [appTitle, contactEmail],
+  );
+  const defaultTermsDocument = useMemo(
+    () =>
+      buildTermsDocument({
+        appTitle,
+        contactEmail,
+      }),
+    [appTitle, contactEmail],
+  );
+  const hasCustomPrivacyPolicy = useMemo(
+    () =>
+      !areDocumentsEqual(
+        privacyPolicyDocument,
+        defaultPrivacyPolicyDocument,
+      ),
+    [defaultPrivacyPolicyDocument, privacyPolicyDocument],
+  );
+  const hasCustomTerms = useMemo(
+    () => !areDocumentsEqual(termsDocument, defaultTermsDocument),
+    [defaultTermsDocument, termsDocument],
+  );
 
   useEffect(() => {
     setPendingAppTitle(appTitle);
@@ -110,67 +112,43 @@ export function AdminCustomizeSection({
   }, [appTitle, contactEmail]);
 
   useEffect(() => {
-    if (activeSection !== "operations") {
-      return;
-    }
+    let isCancelled = false;
 
-    let isMounted = true;
-
-    async function loadBackupStatus(showLoading: boolean) {
-      if (showLoading) {
-        setIsLoadingBackupStatus(true);
-      }
-
+    async function loadAdminConfiguration() {
       try {
-        const nextBackupStatus = await getAdminDatabaseBackupStatus();
+        setIsRefreshingConfiguration(true);
+        const configuration = await getAdminAppConfiguration();
 
-        if (!isMounted) {
+        if (isCancelled) {
           return;
         }
 
-        setBackupStatus(nextBackupStatus);
-        setBackupStatusError(null);
+        setConfiguration(configuration);
+        setConfigurationError(null);
       } catch (error) {
-        if (!isMounted) {
+        if (isCancelled) {
           return;
         }
 
-        setBackupStatusError(
+        setConfigurationError(
           getApiErrorMessage(
             error,
-            "Could not load database backup status right now.",
+            "Couldn't load the latest app customization.",
           ),
         );
       } finally {
-        if (isMounted) {
-          setIsLoadingBackupStatus(false);
+        if (!isCancelled) {
+          setIsRefreshingConfiguration(false);
         }
       }
     }
 
-    void loadBackupStatus(true);
+    void loadAdminConfiguration();
 
     return () => {
-      isMounted = false;
+      isCancelled = true;
     };
-  }, [activeSection]);
-
-  useEffect(() => {
-    if (
-      activeSection !== "operations" ||
-      backupStatus?.running !== true
-    ) {
-      return;
-    }
-
-    const intervalId = setInterval(() => {
-      void refreshBackupStatus();
-    }, 5000);
-
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, [activeSection, backupStatus?.running]);
+  }, [setConfiguration]);
 
   const normalizedStoredTitle = appTitle.trim();
   const normalizedPendingTitle = pendingAppTitle.trim();
@@ -179,7 +157,8 @@ export function AdminCustomizeSection({
   const hasMainChanges =
     normalizedPendingTitle !== normalizedStoredTitle ||
     normalizedPendingContactEmail !== normalizedStoredContactEmail;
-  const isMainSaveDisabled = isSavingMain || !hasMainChanges;
+  const isMainSaveDisabled =
+    isSavingMain || isRefreshingConfiguration || !hasMainChanges;
 
   async function handleSaveMain() {
     const nextAppTitle = pendingAppTitle.trim();
@@ -198,70 +177,57 @@ export function AdminCustomizeSection({
 
     try {
       setIsSavingMain(true);
-
-      await setBrandingSettings({
+      const configuration = await updateAdminAppConfiguration({
         appTitle: nextAppTitle,
         contactEmail: nextContactEmail,
+        privacyPolicyVersion,
+        termsVersion,
+        privacyPolicyDocument: hasCustomPrivacyPolicy
+          ? privacyPolicyDocument
+          : buildPrivacyPolicyDocument({
+              appTitle: nextAppTitle,
+              contactEmail: nextContactEmail,
+            }),
+        termsDocument: hasCustomTerms
+          ? termsDocument
+          : buildTermsDocument({
+              appTitle: nextAppTitle,
+              contactEmail: nextContactEmail,
+            }),
       });
+      setConfiguration(configuration);
 
       setMainError(null);
+      setConfigurationError(null);
       showAppToast({
         text: "Main customization saved.",
         tone: "success",
       });
+    } catch (error) {
+      setMainError(
+        getApiErrorMessage(error, "Couldn't save the main customization."),
+      );
     } finally {
       setIsSavingMain(false);
     }
   }
 
-  async function refreshBackupStatus(showLoading = false) {
-    if (showLoading) {
-      setIsLoadingBackupStatus(true);
-    }
+  async function saveConfigurationUpdate(updatedFields: {
+    privacyPolicyDocument?: SettingsDocument;
+    termsDocument?: SettingsDocument;
+  }) {
+    const configuration = await updateAdminAppConfiguration({
+      appTitle,
+      contactEmail,
+      privacyPolicyVersion,
+      termsVersion,
+      privacyPolicyDocument:
+        updatedFields.privacyPolicyDocument ?? privacyPolicyDocument,
+      termsDocument: updatedFields.termsDocument ?? termsDocument,
+    });
 
-    try {
-      const nextBackupStatus = await getAdminDatabaseBackupStatus();
-      setBackupStatus(nextBackupStatus);
-      setBackupStatusError(null);
-    } catch (error) {
-      setBackupStatusError(
-        getApiErrorMessage(
-          error,
-          "Could not load database backup status right now.",
-        ),
-      );
-    } finally {
-      if (showLoading) {
-        setIsLoadingBackupStatus(false);
-      }
-    }
-  }
-
-  async function handleTriggerBackup() {
-    try {
-      setIsTriggeringBackup(true);
-
-      const nextBackupStatus = await triggerAdminDatabaseBackup();
-      setBackupStatus(nextBackupStatus);
-      setBackupStatusError(null);
-
-      showAppToast({
-        text: nextBackupStatus.running
-          ? "Database backup started."
-          : "Database backup request received.",
-        tone: "success",
-      });
-    } catch (error) {
-      showAppToast({
-        text: getApiErrorMessage(
-          error,
-          "Could not start the database backup right now.",
-        ),
-        tone: "error",
-      });
-    } finally {
-      setIsTriggeringBackup(false);
-    }
+    setConfiguration(configuration);
+    setConfigurationError(null);
   }
 
   return (
@@ -282,10 +248,26 @@ export function AdminCustomizeSection({
           Customization menu
         </Text>
         <Text style={[styles.description, { color: colors.body }]}>
-          Choose which customization area you want to work in. The main section
-          is live now, and the policy sections are ready for the next pass.
+          Choose which customization area you want to work in. Changes here are
+          saved globally and used across the app.
         </Text>
       </View>
+
+      {configurationError ? (
+        <View
+          style={[
+            styles.errorCard,
+            {
+              backgroundColor: colors.subtleAccent,
+              borderColor: colors.cardBorder,
+            },
+          ]}
+        >
+          <Text style={[styles.errorText, { color: "#B91C1C" }]}>
+            {configurationError}
+          </Text>
+        </View>
+      ) : null}
 
       <View
         style={[
@@ -384,8 +366,8 @@ export function AdminCustomizeSection({
               {normalizedPendingContactEmail || "support@explore.app"}
             </Text>
             <Text style={[styles.previewHint, { color: colors.body }]}>
-              This updates the app title and legal contact references used in
-              this build.
+              This updates the global app title and legal contact details used
+              across the app.
             </Text>
           </View>
 
@@ -468,334 +450,56 @@ export function AdminCustomizeSection({
               ]}
             >
               <Text style={styles.primaryActionText}>
-                {isSavingMain ? "Saving..." : "Save main settings"}
+                {isSavingMain
+                  ? "Saving..."
+                  : isRefreshingConfiguration
+                    ? "Refreshing..."
+                    : "Save main settings"}
               </Text>
             </Pressable>
           </View>
         </View>
-      ) : activeSection === "operations" ? (
-        <View
-          style={[
-            styles.contentCard,
-            {
-              backgroundColor: colors.card,
-              borderColor: colors.cardBorder,
-            },
-          ]}
-        >
-          <Text style={[styles.eyebrow, { color: colors.accent }]}>
-            Operations
-          </Text>
-          <Text style={[styles.title, { color: colors.title }]}>
-            Database backup control
-          </Text>
-          <Text style={[styles.description, { color: colors.body }]}>
-            Review backup scheduling, trigger a manual database dump, and check
-            the last upload state from the backend.
-          </Text>
-
-          <View
-            style={[
-              styles.previewCard,
-              {
-                backgroundColor: colors.subtleAccent,
-                borderColor: colors.cardBorder,
-              },
-            ]}
-          >
-            <Text style={[styles.previewTitle, { color: colors.title }]}>
-              {buildBackupHeadline(
-                backupStatus,
-                isLoadingBackupStatus && backupStatus === null,
-              )}
-            </Text>
-            <Text style={[styles.previewBody, { color: colors.body }]}>
-              {buildBackupSummary(backupStatus)}
-            </Text>
-            <Text style={[styles.previewHint, { color: colors.body }]}>
-              {backupStatus?.configurationError ??
-                "Manual runs and scheduled runs both execute from the backend on the VPS."}
-            </Text>
-          </View>
-
-          {backupStatusError ? (
-            <View
-              style={[
-                styles.errorCard,
-                {
-                  backgroundColor: colors.subtleAccent,
-                  borderColor: colors.cardBorder,
-                },
-              ]}
-            >
-              <Text style={[styles.errorText, { color: "#B91C1C" }]}>
-                {backupStatusError}
-              </Text>
-            </View>
-          ) : null}
-
-          {backupStatus ? (
-            <View style={styles.metadataGrid}>
-              <MetadataCard
-                colors={colors}
-                label="Scheduler"
-                value={
-                  backupStatus.schedulerEnabled ? "Enabled" : "Disabled"
-                }
-              />
-              <MetadataCard
-                colors={colors}
-                label="Running"
-                value={backupStatus.running ? "Yes" : "No"}
-              />
-              <MetadataCard
-                colors={colors}
-                label="Schedule"
-                value={
-                  backupStatus.scheduleCron && backupStatus.scheduleZone
-                    ? `${backupStatus.scheduleCron} (${backupStatus.scheduleZone})`
-                    : "Not set"
-                }
-              />
-              <MetadataCard
-                colors={colors}
-                label="Retention"
-                value={`${backupStatus.retentionDays} days`}
-              />
-              <MetadataCard
-                colors={colors}
-                label="Bucket"
-                value={backupStatus.bucketName || "Not set"}
-              />
-              <MetadataCard
-                colors={colors}
-                label="Prefix"
-                value={backupStatus.prefix || "Root"}
-              />
-              <MetadataCard
-                colors={colors}
-                label="Last trigger"
-                value={formatBackupSource(backupStatus.lastTriggerSource)}
-              />
-              <MetadataCard
-                colors={colors}
-                label="Last success"
-                value={formatBackupDateTime(backupStatus.lastSucceededAt)}
-              />
-              <MetadataCard
-                colors={colors}
-                label="Last started"
-                value={formatBackupDateTime(backupStatus.lastStartedAt)}
-              />
-              <MetadataCard
-                colors={colors}
-                label="Last completed"
-                value={formatBackupDateTime(backupStatus.lastCompletedAt)}
-              />
-            </View>
-          ) : null}
-
-          {backupStatus?.lastBackupUri ? (
-            <View
-              style={[
-                styles.inlineNoteCard,
-                {
-                  backgroundColor: colors.menuBackground,
-                  borderColor: colors.cardBorder,
-                },
-              ]}
-            >
-              <Text style={[styles.fieldLabel, { color: colors.body }]}>
-                Last backup URI
-              </Text>
-              <Text style={[styles.inlineNoteText, { color: colors.title }]}>
-                {backupStatus.lastBackupUri}
-              </Text>
-            </View>
-          ) : null}
-
-          {backupStatus?.lastError ? (
-            <View
-              style={[
-                styles.errorCard,
-                {
-                  backgroundColor: colors.subtleAccent,
-                  borderColor: colors.cardBorder,
-                },
-              ]}
-            >
-              <Text style={[styles.fieldLabel, { color: "#B91C1C" }]}>
-                Last backup error
-              </Text>
-              <Text style={[styles.errorText, { color: "#B91C1C" }]}>
-                {backupStatus.lastError}
-              </Text>
-            </View>
-          ) : null}
-
-          <View style={styles.actionRow}>
-            <Pressable
-              accessibilityRole="button"
-              disabled={
-                backupStatus === null ||
-                isLoadingBackupStatus ||
-                isTriggeringBackup ||
-                backupStatus?.running === true ||
-                backupStatus?.configured === false
-              }
-              onPress={() => void handleTriggerBackup()}
-              style={({ pressed }) => [
-                styles.primaryAction,
-                {
-                  backgroundColor: colors.accent,
-                },
-                pressed && styles.actionPressed,
-                (backupStatus === null ||
-                  isLoadingBackupStatus ||
-                  isTriggeringBackup ||
-                  backupStatus?.running === true ||
-                  backupStatus?.configured === false) &&
-                  styles.actionDisabled,
-              ]}
-            >
-              <Text style={styles.primaryActionText}>
-                {isTriggeringBackup
-                  ? "Starting..."
-                  : backupStatus?.running
-                    ? "Backup running..."
-                    : "Run backup now"}
-              </Text>
-            </Pressable>
-
-            <Pressable
-              accessibilityRole="button"
-              disabled={isLoadingBackupStatus}
-              onPress={() => void refreshBackupStatus(true)}
-              style={({ pressed }) => [
-                styles.secondaryAction,
-                {
-                  backgroundColor: colors.menuBackground,
-                  borderColor: colors.cardBorder,
-                },
-                pressed && styles.actionPressed,
-                isLoadingBackupStatus && styles.actionDisabled,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.secondaryActionText,
-                  { color: colors.title },
-                ]}
-              >
-                {isLoadingBackupStatus ? "Refreshing..." : "Refresh status"}
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-      ) : (
-        <PlaceholderSectionCard
+      ) : activeSection === "privacy-policy" ? (
+        <AdminLegalDocumentEditor
           colors={colors}
-          content={PLACEHOLDER_SECTION_CONTENT[activeSection]}
+          currentDocument={privacyPolicyDocument}
+          hasOverride={hasCustomPrivacyPolicy}
+          onResetToDefault={async () => {
+            await saveConfigurationUpdate({
+              privacyPolicyDocument: buildPrivacyPolicyDocument({
+                appTitle,
+                contactEmail,
+              }),
+            });
+          }}
+          onSaveDocument={async (document) => {
+            await saveConfigurationUpdate({
+              privacyPolicyDocument: document,
+            });
+          }}
+          sectionLabel="Privacy policy"
+        />
+      ) : (
+        <AdminLegalDocumentEditor
+          colors={colors}
+          currentDocument={termsDocument}
+          hasOverride={hasCustomTerms}
+          onResetToDefault={async () => {
+            await saveConfigurationUpdate({
+              termsDocument: buildTermsDocument({
+                appTitle,
+                contactEmail,
+              }),
+            });
+          }}
+          onSaveDocument={async (document) => {
+            await saveConfigurationUpdate({
+              termsDocument: document,
+            });
+          }}
+          sectionLabel="Terms and services"
         />
       )}
-    </View>
-  );
-}
-
-function MetadataCard({
-  colors,
-  label,
-  value,
-}: {
-  colors: AdminColors;
-  label: string;
-  value: string;
-}) {
-  return (
-    <View
-      style={[
-        styles.metadataCard,
-        {
-          backgroundColor: colors.menuBackground,
-          borderColor: colors.cardBorder,
-        },
-      ]}
-    >
-      <Text style={[styles.metadataLabel, { color: colors.body }]}>
-        {label}
-      </Text>
-      <Text style={[styles.metadataValue, { color: colors.title }]}>
-        {value}
-      </Text>
-    </View>
-  );
-}
-
-function PlaceholderSectionCard({
-  colors,
-  content,
-}: {
-  colors: AdminColors;
-  content: {
-    eyebrow: string;
-    title: string;
-    description: string;
-    items: string[];
-  };
-}) {
-  return (
-    <View
-      style={[
-        styles.contentCard,
-        {
-          backgroundColor: colors.card,
-          borderColor: colors.cardBorder,
-        },
-      ]}
-    >
-      <Text style={[styles.eyebrow, { color: colors.accent }]}>
-        {content.eyebrow}
-      </Text>
-      <Text style={[styles.title, { color: colors.title }]}>
-        {content.title}
-      </Text>
-      <Text style={[styles.description, { color: colors.body }]}>
-        {content.description}
-      </Text>
-
-      <View style={styles.placeholderList}>
-        {content.items.map((item) => (
-          <View
-            key={item}
-            style={[
-              styles.placeholderRow,
-              {
-                backgroundColor: colors.subtleAccent,
-                borderColor: colors.cardBorder,
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.placeholderDot,
-                {
-                  backgroundColor: colors.accent,
-                },
-              ]}
-            />
-            <Text
-              style={[
-                styles.placeholderText,
-                {
-                  color: colors.title,
-                },
-              ]}
-            >
-              {item}
-            </Text>
-          </View>
-        ))}
-      </View>
     </View>
   );
 }
@@ -945,140 +649,8 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     lineHeight: 20,
   },
-  metadataGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  metadataCard: {
-    minWidth: 150,
-    flexGrow: 1,
-    borderRadius: 18,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    gap: 6,
-  },
-  metadataLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 0.35,
-    textTransform: "uppercase",
-  },
-  metadataValue: {
-    fontSize: 14,
-    fontWeight: "600",
-    lineHeight: 20,
-  },
-  inlineNoteCard: {
-    borderRadius: 18,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    gap: 8,
-  },
-  inlineNoteText: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  placeholderList: {
-    marginTop: 4,
-    gap: 10,
-  },
-  placeholderRow: {
-    borderRadius: 18,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  placeholderDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 999,
-  },
-  placeholderText: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: "600",
-  },
 });
 
-function buildBackupHeadline(
-  backupStatus: AdminDatabaseBackupStatus | null,
-  isLoading: boolean,
-) {
-  if (isLoading) {
-    return "Loading backup status";
-  }
-
-  if (!backupStatus) {
-    return "Backup status unavailable";
-  }
-
-  if (backupStatus.running) {
-    return "Backup in progress";
-  }
-
-  if (backupStatus.lastSucceededAt) {
-    return "Last backup succeeded";
-  }
-
-  if (backupStatus.lastError) {
-    return "Last backup failed";
-  }
-
-  return "Ready for the first backup";
-}
-
-function buildBackupSummary(backupStatus: AdminDatabaseBackupStatus | null) {
-  if (!backupStatus) {
-    return "Open this section to fetch the backend backup state and controls.";
-  }
-
-  if (backupStatus.running) {
-    return "The backend is creating a PostgreSQL dump and uploading it to Firebase Storage.";
-  }
-
-  if (backupStatus.lastSucceededAt) {
-    return `Last success: ${formatBackupDateTime(backupStatus.lastSucceededAt)}.`;
-  }
-
-  if (backupStatus.lastError) {
-    return "The previous backup attempt ended with an error. Review the message below before retrying.";
-  }
-
-  return "No successful backup has been recorded yet.";
-}
-
-function formatBackupSource(value: string | null | undefined) {
-  const normalizedValue = value?.trim().toUpperCase() ?? "";
-
-  if (normalizedValue === "MANUAL") {
-    return "Manual";
-  }
-
-  if (normalizedValue === "SCHEDULED") {
-    return "Scheduled";
-  }
-
-  return "Not yet run";
-}
-
-function formatBackupDateTime(value: string | null | undefined) {
-  const parsedDate = typeof value === "string" ? new Date(value) : null;
-
-  if (!parsedDate || Number.isNaN(parsedDate.getTime())) {
-    return "Not available";
-  }
-
-  return parsedDate.toLocaleString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+function areDocumentsEqual(left: SettingsDocument, right: SettingsDocument) {
+  return JSON.stringify(left) === JSON.stringify(right);
 }

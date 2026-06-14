@@ -1,9 +1,8 @@
 import type { Journey } from "@/src/features/journeys/types/journeyTypes";
 import type { Location } from "@/src/features/locations/types/locationTypes";
-import { calculateDistanceMeters } from "@/src/features/map/utils/mapMath";
+import { LOCATION_UPDATE_INTERVAL_MS } from "@/src/features/discoveries/discoveryConfig";
 
-const DISCOVERY_CHECK_MIN_DISTANCE_METERS = 25;
-const DISCOVERY_CHECK_MIN_INTERVAL_MS = 20_000;
+const DISCOVERY_CHECK_MIN_INTERVAL_MS = LOCATION_UPDATE_INTERVAL_MS;
 const DISCOVERY_WARNING_COOLDOWN_MS = 60_000;
 
 export function shouldTriggerDiscoveryCheck(
@@ -11,6 +10,9 @@ export function shouldTriggerDiscoveryCheck(
   latitude: number,
   longitude: number,
 ) {
+  void latitude;
+  void longitude;
+
   if (!lastCheck) {
     return true;
   }
@@ -24,14 +26,7 @@ export function shouldTriggerDiscoveryCheck(
     return false;
   }
 
-  return (
-    calculateDistanceMeters(
-      lastCheck.latitude,
-      lastCheck.longitude,
-      latitude,
-      longitude,
-    ) >= DISCOVERY_CHECK_MIN_DISTANCE_METERS
-  );
+  return true;
 }
 
 export function shouldShowDiscoveryFeedback(lastShownAt: number) {

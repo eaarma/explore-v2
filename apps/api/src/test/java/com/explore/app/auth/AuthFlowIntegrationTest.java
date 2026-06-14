@@ -191,6 +191,38 @@ class AuthFlowIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    @Test
+    void currentUserEndpointRejectsTokenForDeletedUser() throws Exception {
+        User user = createUser(
+                "me-deleted-" + UUID.randomUUID() + "@example.com",
+                "CorrectPass1!",
+                UserStatus.ACTIVE);
+        String token = generateToken(user);
+
+        userRepository.delete(user);
+        userRepository.flush();
+
+        mockMvc.perform(get("/api/auth/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void currentUserEndpointRejectsTokenForInactiveUser() throws Exception {
+        User user = createUser(
+                "me-inactive-after-token-" + UUID.randomUUID() + "@example.com",
+                "CorrectPass1!",
+                UserStatus.ACTIVE);
+        String token = generateToken(user);
+
+        user.setStatus(UserStatus.INACTIVE);
+        userRepository.saveAndFlush(user);
+
+        mockMvc.perform(get("/api/auth/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isUnauthorized());
+    }
+
     private User createUser(String email, String rawPassword, UserStatus status) {
         return userRepository.saveAndFlush(User.builder()
                 .email(email)

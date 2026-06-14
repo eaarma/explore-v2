@@ -1,7 +1,4 @@
-import { useMemo } from "react";
-
 import type { SettingsDocument } from "@/src/features/settings/components/SettingsDocumentContent";
-import { useAppSettingsStore } from "@/src/features/settings/store/appSettingsStore";
 import {
   resolveAppTitle,
   resolveContactEmail,
@@ -305,23 +302,4 @@ export function buildTermsDocument({
       },
     ],
   };
-}
-
-export function useLegalDocuments() {
-  const appTitle = useAppSettingsStore((state) => state.appTitle);
-  const contactEmail = useAppSettingsStore((state) => state.contactEmail);
-
-  return useMemo(
-    () => ({
-      privacyPolicyDocument: buildPrivacyPolicyDocument({
-        appTitle,
-        contactEmail,
-      }),
-      termsDocument: buildTermsDocument({
-        appTitle,
-        contactEmail,
-      }),
-    }),
-    [appTitle, contactEmail],
-  );
 }

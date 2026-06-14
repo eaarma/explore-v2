@@ -1,8 +1,8 @@
-import { useAppSettingsStore } from "@/src/features/settings/store/appSettingsStore";
+import { useResolvedAppConfiguration } from "@/src/features/appConfig/useResolvedAppConfiguration";
 import { SettingsDocumentScreen } from "@/src/features/settings/screens/SettingsDocumentScreen";
 
 export default function LicensesRoute() {
-  const appTitle = useAppSettingsStore((state) => state.appTitle);
+  const { appTitle } = useResolvedAppConfiguration();
 
   return (
     <SettingsDocumentScreen

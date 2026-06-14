@@ -8,9 +8,7 @@ import { useAuthStore } from "@/src/features/auth/store/authStore";
 import { getApiErrorMessage } from "@/src/shared/api/apiError";
 import { InlineFeedbackCard } from "@/src/shared/components/InlineFeedbackCard";
 import { useColorScheme } from "@/src/shared/hooks/use-color-scheme";
-import {
-  useLegalDocuments,
-} from "@/src/features/settings/content/legalDocuments";
+import { useResolvedAppConfiguration } from "@/src/features/appConfig/useResolvedAppConfiguration";
 import { SettingsDocumentModal } from "@/src/features/settings/components/SettingsDocumentModal";
 
 type ActiveLegalDocument = "privacy" | "terms" | null;
@@ -23,7 +21,8 @@ export function RegisterScreen() {
     [colorScheme],
   );
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { privacyPolicyDocument, termsDocument } = useLegalDocuments();
+  const { privacyPolicyDocument, termsDocument } =
+    useResolvedAppConfiguration();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");

@@ -14,6 +14,7 @@ import com.explore.app.locations.mapper.LocationMapper;
 import com.explore.app.locations.model.Location;
 import com.explore.app.locations.model.LocationStatus;
 import com.explore.app.locations.repository.LocationRepository;
+import com.explore.app.shared.NotFoundException;
 import com.explore.app.user.repository.UserRepository;
 
 import org.junit.jupiter.api.Test;
@@ -21,8 +22,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 @ExtendWith(MockitoExtension.class)
 class LocationServicePublicRoutesTest {
@@ -56,25 +57,29 @@ class LocationServicePublicRoutesTest {
                 .title("Active location")
                 .build();
 
-        when(locationRepository.findByStatus(LocationStatus.ACTIVE)).thenReturn(List.of(activeLocation));
+        when(locationRepository.findByStatusOrderByCreatedAtDescIdDesc(
+                LocationStatus.ACTIVE,
+                PageRequest.of(0, LocationService.DEFAULT_PAGE_SIZE)))
+                .thenReturn(new PageImpl<>(List.of(activeLocation)));
         when(locationMapper.toResponse(activeLocation)).thenReturn(response);
 
         List<LocationResponse> locations = locationService.getPublicLocations();
 
         assertEquals(List.of(response), locations);
-        verify(locationRepository).findByStatus(LocationStatus.ACTIVE);
-        verify(locationRepository, never()).findAll();
+        verify(locationRepository).findByStatusOrderByCreatedAtDescIdDesc(
+                LocationStatus.ACTIVE,
+                PageRequest.of(0, LocationService.DEFAULT_PAGE_SIZE));
     }
 
     @Test
     void getPublicLocationByIdRejectsInactiveOrMissingLocations() {
         when(locationRepository.findByIdAndStatus(42L, LocationStatus.ACTIVE)).thenReturn(Optional.empty());
 
-        ResponseStatusException exception = assertThrows(
-                ResponseStatusException.class,
+        NotFoundException exception = assertThrows(
+                NotFoundException.class,
                 () -> locationService.getPublicLocationById(42L));
 
-        assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+        assertEquals("Location not found", exception.getMessage());
         verify(locationRepository).findByIdAndStatus(42L, LocationStatus.ACTIVE);
     }
 }

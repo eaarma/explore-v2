@@ -100,7 +100,7 @@ export function SettingsScreen() {
 
       <SettingsSectionCard
         colors={colors}
-        description="Legal links are placeholder pages in this branch, but the routes are ready for final copy."
+        description="Review legal documents, notices, and build information."
         styles={styles}
         title="Info"
       >

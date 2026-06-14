@@ -9,7 +9,6 @@ import {
   Layer,
   Map as MapLibreMap,
   RasterSource,
-  UserLocation,
   VectorSource,
   type PressEventWithFeatures,
   type ViewStateChangeEvent,
@@ -17,7 +16,6 @@ import {
 import type { StyleSpecification } from "@maplibre/maplibre-gl-style-spec";
 
 import type { Journey } from "@/src/features/journeys/types/journeyTypes";
-import { LOCATION_UPDATE_MIN_DISPLACEMENT_METERS } from "@/src/features/discoveries/discoveryConfig";
 import type { Location } from "@/src/features/locations/types/locationTypes";
 import {
   activeHighlightedFilter,
@@ -83,6 +81,7 @@ import {
   type MapOverlayKey,
 } from "@/src/features/map/mapConfig";
 import { createPointFeatureCollection } from "@/src/features/map/utils/mapFeatureCollection";
+import { MapUserLocation } from "@/src/features/map/components/MapUserLocation";
 
 type MapCanvasProps = {
   cameraRef: RefObject<CameraRef | null>;
@@ -98,12 +97,25 @@ type MapCanvasProps = {
   ) => void;
   onMapPress: () => void;
   onMapReady: () => void;
-  onMapRegionChange: (
+  onMapRegionChangeComplete: (
+    event: NativeSyntheticEvent<ViewStateChangeEvent>,
+  ) => void;
+  onMapRegionChanging: (
     event: NativeSyntheticEvent<ViewStateChangeEvent>,
   ) => void;
   overlayVisibility: Record<MapOverlayKey, boolean>;
   resolvedMapStyle: string | StyleSpecification;
   roadLabelLayerId: string | null;
+  userPosition:
+    | {
+        coords?: {
+          accuracy?: number | null;
+          latitude?: number | null;
+          longitude?: number | null;
+        } | null;
+      }
+    | null
+    | undefined;
 };
 
 export function MapCanvas({
@@ -116,10 +128,12 @@ export function MapCanvas({
   onLocationSourcePress,
   onMapPress,
   onMapReady,
-  onMapRegionChange,
+  onMapRegionChangeComplete,
+  onMapRegionChanging,
   overlayVisibility,
   resolvedMapStyle,
   roadLabelLayerId,
+  userPosition,
 }: MapCanvasProps) {
   const locationSourceId = `location-points-${contentRevision}`;
   const locationLayerId = `location-markers-${contentRevision}`;
@@ -151,8 +165,8 @@ export function MapCanvas({
       attribution
       compass={false}
       logo={false}
-      onRegionIsChanging={onMapRegionChange}
-      onRegionDidChange={onMapRegionChange}
+      onRegionIsChanging={onMapRegionChanging}
+      onRegionDidChange={onMapRegionChangeComplete}
       onPress={onMapPress}
       onDidFinishLoadingMap={onMapReady}
     >
@@ -165,11 +179,7 @@ export function MapCanvas({
       />
 
       {locationPermissionGranted ? (
-        <UserLocation
-          accuracy
-          heading
-          minDisplacement={LOCATION_UPDATE_MIN_DISPLACEMENT_METERS}
-        />
+        <MapUserLocation position={userPosition} showAccuracy />
       ) : null}
       <Images images={mapMarkerImages} />
 

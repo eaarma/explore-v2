@@ -15,14 +15,13 @@ import com.explore.app.journeys.service.JourneyLocationService;
 import com.explore.app.journeys.service.JourneyService;
 import com.explore.app.locations.dto.LocationResponse;
 import com.explore.app.locations.service.LocationService;
+import com.explore.app.shared.NotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.HttpStatus;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.server.ResponseStatusException;
 
 @SpringBootTest(properties = "security.rate-limit.enabled=false")
 @AutoConfigureMockMvc
@@ -41,8 +40,25 @@ class PublicRouteIntegrationTest {
     private JourneyLocationService journeyLocationService;
 
     @Test
+    void publicLocationsRouteWorksWithoutExplicitPaginationParams() throws Exception {
+        when(locationService.getPublicLocations(0, 100)).thenReturn(List.of(
+                LocationResponse.builder()
+                        .id(15L)
+                        .title("Forest Shelter")
+                        .status(1)
+                        .build()));
+
+        mockMvc.perform(get("/api/public/locations"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(15))
+                .andExpect(jsonPath("$[0].title").value("Forest Shelter"));
+
+        verify(locationService).getPublicLocations(0, 100);
+    }
+
+    @Test
     void publicLocationCategoryRouteWorksWithoutAuth() throws Exception {
-        when(locationService.getPublicLocationsByCategory("nature")).thenReturn(List.of(
+        when(locationService.getPublicLocationsByCategory("nature", 0, 100)).thenReturn(List.of(
                 LocationResponse.builder()
                         .id(1L)
                         .title("Bog Trail")
@@ -57,12 +73,12 @@ class PublicRouteIntegrationTest {
                 .andExpect(jsonPath("$[0].title").value("Bog Trail"))
                 .andExpect(jsonPath("$[0].category").value("nature"));
 
-        verify(locationService).getPublicLocationsByCategory("nature");
+        verify(locationService).getPublicLocationsByCategory("nature", 0, 100);
     }
 
     @Test
     void publicLocationCountyRouteWorksWithoutAuth() throws Exception {
-        when(locationService.getPublicLocationsByCounty("Harju")).thenReturn(List.of(
+        when(locationService.getPublicLocationsByCounty("Harju", 0, 100)).thenReturn(List.of(
                 LocationResponse.builder()
                         .id(2L)
                         .title("Cliff Walk")
@@ -77,12 +93,12 @@ class PublicRouteIntegrationTest {
                 .andExpect(jsonPath("$[0].county").value("Harju"))
                 .andExpect(jsonPath("$[0].title").value("Cliff Walk"));
 
-        verify(locationService).getPublicLocationsByCounty("Harju");
+        verify(locationService).getPublicLocationsByCounty("Harju", 0, 100);
     }
 
     @Test
     void publicLocationNearbyRouteWorksWithoutAuth() throws Exception {
-        when(locationService.getPublicNearbyLocations(59.437, 24.7536, 750.0)).thenReturn(List.of(
+        when(locationService.getPublicNearbyLocations(59.437, 24.7536, 750.0, 0, 100)).thenReturn(List.of(
                 LocationResponse.builder()
                         .id(3L)
                         .title("Nearby Point")
@@ -99,13 +115,29 @@ class PublicRouteIntegrationTest {
                 .andExpect(jsonPath("$[0].id").value(3))
                 .andExpect(jsonPath("$[0].title").value("Nearby Point"));
 
-        verify(locationService).getPublicNearbyLocations(59.437, 24.7536, 750.0);
+        verify(locationService).getPublicNearbyLocations(59.437, 24.7536, 750.0, 0, 100);
+    }
+
+    @Test
+    void publicLocationNearbyRouteReturnsBadRequestWhenServiceRejectsClientInput() throws Exception {
+        when(locationService.getPublicNearbyLocations(59.437, 24.7536, -1.0, 0, 100))
+                .thenThrow(new IllegalArgumentException("Radius must be zero or greater"));
+
+        mockMvc.perform(get("/api/public/locations/nearby")
+                        .queryParam("latitude", "59.437")
+                        .queryParam("longitude", "24.7536")
+                        .queryParam("radiusMeters", "-1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("Radius must be zero or greater"));
+
+        verify(locationService).getPublicNearbyLocations(59.437, 24.7536, -1.0, 0, 100);
     }
 
     @Test
     void publicLocationByIdReturnsNotFoundWithoutAuthWhenInactiveOrMissing() throws Exception {
         when(locationService.getPublicLocationById(99L))
-                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Location not found"));
+                .thenThrow(new NotFoundException("Location not found"));
 
         mockMvc.perform(get("/api/public/locations/{id}", 99L))
                 .andExpect(status().isNotFound());
@@ -114,8 +146,25 @@ class PublicRouteIntegrationTest {
     }
 
     @Test
+    void publicJourneysRouteWorksWithoutExplicitPaginationParams() throws Exception {
+        when(journeyService.getPublicJourneys(0, 100)).thenReturn(List.of(
+                JourneyResponse.builder()
+                        .id(16L)
+                        .title("River Route")
+                        .status(1)
+                        .build()));
+
+        mockMvc.perform(get("/api/public/journeys"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(16))
+                .andExpect(jsonPath("$[0].title").value("River Route"));
+
+        verify(journeyService).getPublicJourneys(0, 100);
+    }
+
+    @Test
     void publicJourneyCategoryRouteWorksWithoutAuth() throws Exception {
-        when(journeyService.getPublicJourneysByCategory("hiking")).thenReturn(List.of(
+        when(journeyService.getPublicJourneysByCategory("hiking", 0, 100)).thenReturn(List.of(
                 JourneyResponse.builder()
                         .id(10L)
                         .title("Forest Loop")
@@ -130,12 +179,12 @@ class PublicRouteIntegrationTest {
                 .andExpect(jsonPath("$[0].title").value("Forest Loop"))
                 .andExpect(jsonPath("$[0].category").value("hiking"));
 
-        verify(journeyService).getPublicJourneysByCategory("hiking");
+        verify(journeyService).getPublicJourneysByCategory("hiking", 0, 100);
     }
 
     @Test
     void publicJourneyCountyRouteWorksWithoutAuth() throws Exception {
-        when(journeyService.getPublicJourneysByCounty("Harju")).thenReturn(List.of(
+        when(journeyService.getPublicJourneysByCounty("Harju", 0, 100)).thenReturn(List.of(
                 JourneyResponse.builder()
                         .id(11L)
                         .title("Coastal Ride")
@@ -150,12 +199,12 @@ class PublicRouteIntegrationTest {
                 .andExpect(jsonPath("$[0].county").value("Harju"))
                 .andExpect(jsonPath("$[0].title").value("Coastal Ride"));
 
-        verify(journeyService).getPublicJourneysByCounty("Harju");
+        verify(journeyService).getPublicJourneysByCounty("Harju", 0, 100);
     }
 
     @Test
     void publicJourneyNearbyRouteWorksWithoutAuth() throws Exception {
-        when(journeyService.getPublicNearbyJourneys(59.437, 24.7536, 1500.0)).thenReturn(List.of(
+        when(journeyService.getPublicNearbyJourneys(59.437, 24.7536, 1500.0, 0, 100)).thenReturn(List.of(
                 JourneyResponse.builder()
                         .id(12L)
                         .title("Nearby Journey")
@@ -172,7 +221,7 @@ class PublicRouteIntegrationTest {
                 .andExpect(jsonPath("$[0].id").value(12))
                 .andExpect(jsonPath("$[0].title").value("Nearby Journey"));
 
-        verify(journeyService).getPublicNearbyJourneys(59.437, 24.7536, 1500.0);
+        verify(journeyService).getPublicNearbyJourneys(59.437, 24.7536, 1500.0, 0, 100);
     }
 
     @Test
@@ -208,7 +257,7 @@ class PublicRouteIntegrationTest {
     @Test
     void publicJourneyByIdReturnsNotFoundWithoutAuthWhenInactiveOrMissing() throws Exception {
         when(journeyService.getPublicJourneyById(77L))
-                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Journey not found"));
+                .thenThrow(new NotFoundException("Journey not found"));
 
         mockMvc.perform(get("/api/public/journeys/{id}", 77L))
                 .andExpect(status().isNotFound());
@@ -219,7 +268,7 @@ class PublicRouteIntegrationTest {
     @Test
     void publicJourneyDetailReturnsNotFoundWithoutAuthWhenInactiveOrMissing() throws Exception {
         when(journeyService.getPublicJourneyWithLocations(78L))
-                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Journey not found"));
+                .thenThrow(new NotFoundException("Journey not found"));
 
         mockMvc.perform(get("/api/public/journeys/{journeyId}/detail", 78L))
                 .andExpect(status().isNotFound());

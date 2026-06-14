@@ -21,14 +21,15 @@ import com.explore.app.journeys.repository.JourneyLocationRepository;
 import com.explore.app.journeys.repository.JourneyRepository;
 import com.explore.app.locations.model.Location;
 import com.explore.app.locations.model.LocationStatus;
+import com.explore.app.shared.NotFoundException;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 @ExtendWith(MockitoExtension.class)
 class JourneyServicePublicRoutesTest {
@@ -60,25 +61,29 @@ class JourneyServicePublicRoutesTest {
                 .title("Active journey")
                 .build();
 
-        when(journeyRepository.findByStatus(JourneyStatus.ACTIVE)).thenReturn(List.of(activeJourney));
+        when(journeyRepository.findByStatusOrderByCreatedAtDescIdDesc(
+                JourneyStatus.ACTIVE,
+                PageRequest.of(0, JourneyService.DEFAULT_PAGE_SIZE)))
+                .thenReturn(new PageImpl<>(List.of(activeJourney)));
         when(journeyMapper.toResponse(activeJourney)).thenReturn(response);
 
         List<JourneyResponse> journeys = journeyService.getPublicJourneys();
 
         assertEquals(List.of(response), journeys);
-        verify(journeyRepository).findByStatus(JourneyStatus.ACTIVE);
-        verify(journeyRepository, never()).findAll();
+        verify(journeyRepository).findByStatusOrderByCreatedAtDescIdDesc(
+                JourneyStatus.ACTIVE,
+                PageRequest.of(0, JourneyService.DEFAULT_PAGE_SIZE));
     }
 
     @Test
     void getPublicJourneyByIdRejectsInactiveOrMissingJourneys() {
         when(journeyRepository.findByIdAndStatus(5L, JourneyStatus.ACTIVE)).thenReturn(Optional.empty());
 
-        ResponseStatusException exception = assertThrows(
-                ResponseStatusException.class,
+        NotFoundException exception = assertThrows(
+                NotFoundException.class,
                 () -> journeyService.getPublicJourneyById(5L));
 
-        assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+        assertEquals("Journey not found", exception.getMessage());
         verify(journeyRepository).findByIdAndStatus(5L, JourneyStatus.ACTIVE);
     }
 

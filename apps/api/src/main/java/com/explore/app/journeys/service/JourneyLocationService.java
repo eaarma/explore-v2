@@ -11,11 +11,10 @@ import com.explore.app.journeys.dto.JourneyLocationResponse;
 import com.explore.app.locations.model.Location;
 import com.explore.app.locations.model.LocationStatus;
 import com.explore.app.locations.repository.LocationRepository;
+import com.explore.app.shared.NotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashSet;
 import java.util.List;
@@ -74,7 +73,7 @@ public class JourneyLocationService {
     @Transactional
     public void removeLocationFromJourney(Long journeyId, Long locationId) {
         JourneyLocation journeyLocation = journeyLocationRepository.findByJourneyIdAndLocationId(journeyId, locationId)
-                .orElseThrow(() -> new IllegalArgumentException("Journey location mapping not found"));
+                .orElseThrow(() -> new NotFoundException("Journey location mapping not found"));
 
         journeyLocationRepository.delete(journeyLocation);
     }
@@ -126,17 +125,17 @@ public class JourneyLocationService {
 
     private Journey findJourney(Long journeyId) {
         return journeyRepository.findById(journeyId)
-                .orElseThrow(() -> new IllegalArgumentException("Journey not found"));
+                .orElseThrow(() -> new NotFoundException("Journey not found"));
     }
 
     private Journey findActiveJourney(Long journeyId) {
         return journeyRepository.findByIdAndStatus(journeyId, JourneyStatus.ACTIVE)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Journey not found"));
+                .orElseThrow(() -> new NotFoundException("Journey not found"));
     }
 
     private Location findLocation(Long locationId) {
         return locationRepository.findById(locationId)
-                .orElseThrow(() -> new IllegalArgumentException("Location not found"));
+                .orElseThrow(() -> new NotFoundException("Location not found"));
     }
 
     private void validateOrder(List<JourneyLocationOrderRequest> order) {

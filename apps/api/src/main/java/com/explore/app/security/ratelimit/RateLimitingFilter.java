@@ -114,6 +114,10 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     }
 
     private String resolveClientIpKey(HttpServletRequest request) {
+        if (!rateLimitProperties.isTrustForwardedHeaders()) {
+            return "ip:" + request.getRemoteAddr();
+        }
+
         String forwardedFor = request.getHeader("X-Forwarded-For");
         if (StringUtils.hasText(forwardedFor)) {
             String firstAddress = forwardedFor.split(",")[0].trim();

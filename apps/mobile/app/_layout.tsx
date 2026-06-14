@@ -3,7 +3,9 @@ import { ThemeProvider, DarkTheme, DefaultTheme } from "@react-navigation/native
 import { StatusBar } from "expo-status-bar";
 import { Stack } from "expo-router";
 import { LogManager } from "@maplibre/maplibre-react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
+import { useAppConfigurationStore } from "@/src/features/appConfig/appConfigStore";
 import { useAppSettingsStore } from "@/src/features/settings/store/appSettingsStore";
 import { AppDialogHost } from "@/src/shared/components/AppDialogHost";
 import { AppToastHost } from "@/src/shared/components/AppToastHost";
@@ -38,11 +40,15 @@ const navigationThemes = {
 
 export default function RootLayout() {
   const hydrateSettings = useAppSettingsStore((state) => state.hydrate);
+  const hydrateAppConfiguration = useAppConfigurationStore(
+    (state) => state.hydrate,
+  );
   const colorScheme = useColorScheme();
 
   useEffect(() => {
     void hydrateSettings();
-  }, [hydrateSettings]);
+    void hydrateAppConfiguration();
+  }, [hydrateAppConfiguration, hydrateSettings]);
 
   useEffect(() => {
     LogManager.onLog((event) => {
@@ -61,99 +67,108 @@ export default function RootLayout() {
   const headerTintColor = colorScheme === "dark" ? "#F8FAFC" : "#0F172A";
 
   return (
-    <ThemeProvider value={navigationTheme}>
-      <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: {
-            backgroundColor: navigationTheme.colors.background,
-          },
-          headerStyle: {
-            backgroundColor: headerBackgroundColor,
-          },
-          headerTintColor,
-          headerTitleStyle: {
-            fontWeight: "700",
-          },
-        }}
-      >
-        <Stack.Screen name="startup" />
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen
-          name="settings"
-          options={{
-            headerShown: true,
-            title: "Settings",
-          }}
-        />
-        <Stack.Screen
-          name="admin"
-          options={{
-            headerShown: true,
-            title: "Admin",
-          }}
-        />
-        <Stack.Screen
-          name="admin-locations"
-          options={{
-            headerShown: true,
-            title: "Locations",
-          }}
-        />
-        <Stack.Screen
-          name="admin-journeys"
-          options={{
-            headerShown: true,
-            title: "Journeys",
-          }}
-        />
-        <Stack.Screen
-          name="admin-journey/[journeyId]"
-          options={{
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider value={navigationTheme}>
+        <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+        <Stack
+          screenOptions={{
             headerShown: false,
+            contentStyle: {
+              backgroundColor: navigationTheme.colors.background,
+            },
+            headerStyle: {
+              backgroundColor: headerBackgroundColor,
+            },
+            headerTintColor,
+            headerTitleStyle: {
+              fontWeight: "700",
+            },
           }}
-        />
-        <Stack.Screen
-          name="admin-users"
-          options={{
-            headerShown: true,
-            title: "Users",
-          }}
-        />
-        <Stack.Screen
-          name="admin-customize"
-          options={{
-            headerShown: true,
-            title: "Customize",
-          }}
-        />
-        <Stack.Screen
-          name="privacy-policy"
-          options={{
-            headerShown: true,
-            title: "Privacy policy",
-          }}
-        />
-        <Stack.Screen
-          name="terms"
-          options={{
-            headerShown: true,
-            title: "Terms",
-          }}
-        />
-        <Stack.Screen
-          name="licenses"
-          options={{
-            headerShown: true,
-            title: "Licenses",
-          }}
-        />
-      </Stack>
-      <AppToastHost />
-      <AppDialogHost />
-    </ThemeProvider>
+        >
+          <Stack.Screen name="startup" />
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen
+            name="settings"
+            options={{
+              headerShown: true,
+              title: "Settings",
+            }}
+          />
+          <Stack.Screen
+            name="admin"
+            options={{
+              headerShown: true,
+              title: "Admin",
+            }}
+          />
+          <Stack.Screen
+            name="admin-locations"
+            options={{
+              headerShown: true,
+              title: "Locations",
+            }}
+          />
+          <Stack.Screen
+            name="admin-journeys"
+            options={{
+              headerShown: true,
+              title: "Journeys",
+            }}
+          />
+          <Stack.Screen
+            name="admin-journey/[journeyId]"
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="admin-users"
+            options={{
+              headerShown: true,
+              title: "Users",
+            }}
+          />
+          <Stack.Screen
+            name="admin-operations"
+            options={{
+              headerShown: true,
+              title: "Operations",
+            }}
+          />
+          <Stack.Screen
+            name="admin-customize"
+            options={{
+              headerShown: true,
+              title: "Customize",
+            }}
+          />
+          <Stack.Screen
+            name="privacy-policy"
+            options={{
+              headerShown: true,
+              title: "Privacy policy",
+            }}
+          />
+          <Stack.Screen
+            name="terms"
+            options={{
+              headerShown: true,
+              title: "Terms",
+            }}
+          />
+          <Stack.Screen
+            name="licenses"
+            options={{
+              headerShown: true,
+              title: "Licenses",
+            }}
+          />
+        </Stack>
+        <AppToastHost />
+        <AppDialogHost />
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
 

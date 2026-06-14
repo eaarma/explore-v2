@@ -107,13 +107,74 @@ class RateLimitingFilterTest {
         assertEquals(2, chainCalls.get());
     }
 
+    @Test
+    void forwardedHeadersAreIgnoredByDefault() throws ServletException, IOException {
+        properties.setLogin(new RateLimitProperties.LimitRule(1, Duration.ofMinutes(1)));
+        AtomicInteger chainCalls = new AtomicInteger();
+        FilterChain chain = (request, response) -> chainCalls.incrementAndGet();
+
+        MockHttpServletResponse first = executeRequest(
+                "POST",
+                "/api/auth/login",
+                "203.0.113.10",
+                "198.51.100.1",
+                chain);
+        MockHttpServletResponse second = executeRequest(
+                "POST",
+                "/api/auth/login",
+                "203.0.113.10",
+                "198.51.100.2",
+                chain);
+
+        assertEquals(200, first.getStatus());
+        assertEquals(429, second.getStatus());
+        assertEquals(1, chainCalls.get());
+    }
+
+    @Test
+    void forwardedHeadersCanBeTrustedWhenExplicitlyEnabled() throws ServletException, IOException {
+        properties.setTrustForwardedHeaders(true);
+        properties.setLogin(new RateLimitProperties.LimitRule(1, Duration.ofMinutes(1)));
+        AtomicInteger chainCalls = new AtomicInteger();
+        FilterChain chain = (request, response) -> chainCalls.incrementAndGet();
+
+        MockHttpServletResponse first = executeRequest(
+                "POST",
+                "/api/auth/login",
+                "203.0.113.10",
+                "198.51.100.1",
+                chain);
+        MockHttpServletResponse second = executeRequest(
+                "POST",
+                "/api/auth/login",
+                "203.0.113.10",
+                "198.51.100.2",
+                chain);
+
+        assertEquals(200, first.getStatus());
+        assertEquals(200, second.getStatus());
+        assertEquals(2, chainCalls.get());
+    }
+
     private MockHttpServletResponse executeRequest(
             String method,
             String path,
             String remoteAddress,
             FilterChain chain) throws ServletException, IOException {
+        return executeRequest(method, path, remoteAddress, null, chain);
+    }
+
+    private MockHttpServletResponse executeRequest(
+            String method,
+            String path,
+            String remoteAddress,
+            String forwardedFor,
+            FilterChain chain) throws ServletException, IOException {
         MockHttpServletRequest request = new MockHttpServletRequest(method, path);
         request.setRemoteAddr(remoteAddress);
+        if (forwardedFor != null) {
+            request.addHeader("X-Forwarded-For", forwardedFor);
+        }
 
         MockHttpServletResponse response = new MockHttpServletResponse();
         filter.doFilter(request, response, chain);

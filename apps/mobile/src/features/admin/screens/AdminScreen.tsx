@@ -18,6 +18,7 @@ const ADMIN_MENU_OPTIONS: {
     | "/admin-locations"
     | "/admin-journeys"
     | "/admin-users"
+    | "/admin-operations"
     | "/admin-customize";
 }[] = [
   {
@@ -34,6 +35,11 @@ const ADMIN_MENU_OPTIONS: {
     label: "Users",
     description: "Browse accounts, roles, and statuses.",
     href: "/admin-users",
+  },
+  {
+    label: "Operations",
+    description: "Run backups and review maintenance status.",
+    href: "/admin-operations",
   },
   {
     label: "Customize",

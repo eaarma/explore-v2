@@ -18,14 +18,13 @@ import com.explore.app.journeys.repository.JourneyRepository;
 import com.explore.app.locations.model.Location;
 import com.explore.app.locations.model.LocationStatus;
 import com.explore.app.locations.repository.LocationRepository;
+import com.explore.app.shared.NotFoundException;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 
 @ExtendWith(MockitoExtension.class)
 class JourneyLocationServicePublicRoutesTest {
@@ -88,11 +87,11 @@ class JourneyLocationServicePublicRoutesTest {
     void getPublicLocationsForJourneyRejectsInactiveOrMissingJourney() {
         when(journeyRepository.findByIdAndStatus(7L, JourneyStatus.ACTIVE)).thenReturn(Optional.empty());
 
-        ResponseStatusException exception = assertThrows(
-                ResponseStatusException.class,
+        NotFoundException exception = assertThrows(
+                NotFoundException.class,
                 () -> journeyLocationService.getPublicLocationsForJourney(7L));
 
-        assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+        assertEquals("Journey not found", exception.getMessage());
         verify(journeyRepository).findByIdAndStatus(7L, JourneyStatus.ACTIVE);
     }
 }

@@ -15,6 +15,7 @@ import com.explore.app.trips.model.TripLocation;
 import com.explore.app.trips.repository.TripJourneyRepository;
 import com.explore.app.trips.repository.TripLocationRepository;
 import com.explore.app.trips.repository.TripRepository;
+import com.explore.app.shared.NotFoundException;
 import com.explore.app.user.model.User;
 import com.explore.app.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -62,7 +63,7 @@ public class TripService {
         Trip trip = findOwnedTrip(user.getId(), tripId);
         ensureTripIsEditable(trip);
         Location location = locationRepository.findById(locationId)
-                .orElseThrow(() -> new IllegalArgumentException("Location not found"));
+                .orElseThrow(() -> new NotFoundException("Location not found"));
 
         if (tripLocationRepository.findByTripIdAndLocationId(tripId, locationId).isEmpty()) {
             TripLocation tripLocation = TripLocation.builder()
@@ -83,7 +84,7 @@ public class TripService {
         Trip trip = findOwnedTrip(user.getId(), tripId);
         ensureTripIsEditable(trip);
         Journey journey = journeyRepository.findById(journeyId)
-                .orElseThrow(() -> new IllegalArgumentException("Journey not found"));
+                .orElseThrow(() -> new NotFoundException("Journey not found"));
 
         if (tripJourneyRepository.findByTripIdAndJourneyId(tripId, journeyId).isEmpty()) {
             TripJourney tripJourney = TripJourney.builder()
@@ -149,13 +150,13 @@ public class TripService {
 
             if ("location".equals(kind)) {
                 TripLocation tripLocation = tripLocationRepository.findByIdAndTripId(relationId, tripId)
-                        .orElseThrow(() -> new IllegalArgumentException("Trip location not found"));
+                        .orElseThrow(() -> new NotFoundException("Trip location not found"));
                 tripLocation.setSortOrder(index);
                 continue;
             }
 
             TripJourney tripJourney = tripJourneyRepository.findByIdAndTripId(relationId, tripId)
-                    .orElseThrow(() -> new IllegalArgumentException("Trip journey not found"));
+                    .orElseThrow(() -> new NotFoundException("Trip journey not found"));
             tripJourney.setSortOrder(index);
         }
 
@@ -165,12 +166,12 @@ public class TripService {
 
     private User findUser(String email) {
         return userRepository.findByEmail(normalizeEmail(email))
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                .orElseThrow(() -> new NotFoundException("User not found"));
     }
 
     private Trip findOwnedTrip(UUID userId, Long tripId) {
         return tripRepository.findByIdAndUserId(tripId, userId)
-                .orElseThrow(() -> new IllegalArgumentException("Trip not found"));
+                .orElseThrow(() -> new NotFoundException("Trip not found"));
     }
 
     private void ensureTripIsEditable(Trip trip) {

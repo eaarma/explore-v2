@@ -35,6 +35,7 @@ type CurrentPosition = {
     latitude?: number | null;
     longitude?: number | null;
   };
+  timestamp?: number | null;
 } | null | undefined;
 
 type UseMapDiscoverySyncOptions = {
@@ -188,6 +189,18 @@ export function useMapDiscoverySync({
           ),
         );
 
+        const bannerMessage = buildDiscoveryBannerMessage(discoveryResult);
+        markDiscoveryProgressUpdated();
+
+        if (bannerMessage) {
+          setDiscoveryBanner({
+            tone: "success",
+            text: options.offlineCapture
+              ? `${bannerMessage}. Saved offline and will sync when you're back online.`
+              : bannerMessage,
+          });
+        }
+
         const hasUnknownDiscoveredContent =
           discoveryResult.discoveredLocations.some(
             (discovery) => !locationsById.has(discovery.locationId),
@@ -211,18 +224,6 @@ export function useMapDiscoverySync({
           } catch {
             // Keep the discovery result visible even if refreshing the full map content fails.
           }
-        }
-
-        markDiscoveryProgressUpdated();
-
-        const bannerMessage = buildDiscoveryBannerMessage(discoveryResult);
-        if (bannerMessage) {
-          setDiscoveryBanner({
-            tone: "success",
-            text: options.offlineCapture
-              ? `${bannerMessage}. Saved offline and will sync when you're back online.`
-              : bannerMessage,
-          });
         }
 
         return true;
@@ -306,6 +307,7 @@ export function useMapDiscoverySync({
     currentPosition?.coords?.accuracy,
     currentPosition?.coords?.latitude,
     currentPosition?.coords?.longitude,
+    currentPosition?.timestamp,
     journeys,
     journeysById,
     locationPermissionGranted,

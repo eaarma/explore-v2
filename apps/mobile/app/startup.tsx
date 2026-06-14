@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { useFonts } from "expo-font";
 import { Image } from "expo-image";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
 import { getCurrentUser } from "@/src/features/auth/api/authApi";
 import { useAuthStore } from "@/src/features/auth/store/authStore";
@@ -73,7 +73,10 @@ export default function StartupScreen() {
         }
 
         restoreSession(user, "authenticated-online");
-        router.replace("/map");
+
+        if (isActive) {
+          router.replace("/map");
+        }
       } catch (error) {
         if (isApiNetworkError(error)) {
           if (!isActive) {
@@ -97,7 +100,7 @@ export default function StartupScreen() {
       }
     }
 
-    bootstrap();
+    void bootstrap();
 
     return () => {
       isActive = false;
@@ -117,7 +120,7 @@ export default function StartupScreen() {
           source={STARTUP_ICON_SOURCE}
           style={styles.icon}
         />
-        <Text style={[styles.title, fontsLoaded ? styles.font : null]}>
+        <Text style={[styles.title, fontsLoaded ? styles.titleFont : null]}>
           Explore
         </Text>
       </View>
@@ -145,13 +148,12 @@ const styles = StyleSheet.create({
   },
   title: {
     color: "#111827",
-    fontSize: 34,
-    lineHeight: 40,
-    fontWeight: "600",
-    letterSpacing: 0.4,
+    fontSize: 42,
+    lineHeight: 48,
+    letterSpacing: 0,
+    paddingHorizontal: 10,
   },
-  font: {
+  titleFont: {
     fontFamily: "Rockabilly",
-    fontWeight: "400",
   },
 });

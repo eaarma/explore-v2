@@ -1,6 +1,7 @@
 package com.explore.app.journeys.model;
 
 import jakarta.persistence.*;
+import org.locationtech.jts.geom.Point;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -34,6 +35,9 @@ public class Journey {
     private Double latitude;
 
     private Double longitude;
+
+    @Column(columnDefinition = "geography(Point, 4326)")
+    private Point point;
 
     private String county;
 

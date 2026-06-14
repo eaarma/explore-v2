@@ -1,5 +1,8 @@
 package com.explore.app.auth.service;
 
+import com.explore.app.appconfig.mapper.AppConfigurationMapper;
+import com.explore.app.appconfig.model.AppConfiguration;
+import com.explore.app.appconfig.repository.AppConfigurationRepository;
 import com.explore.app.auth.dto.LoginRequest;
 import com.explore.app.auth.dto.LoginResponse;
 import com.explore.app.auth.dto.RegisterRequest;
@@ -29,11 +32,10 @@ import java.time.Instant;
 @Transactional(readOnly = true)
 public class AuthService {
 
-    private static final String TERMS_VERSION = "2026-05-31";
-    private static final String PRIVACY_POLICY_VERSION = "2026-05-31";
-
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
+    private final AppConfigurationRepository appConfigurationRepository;
+    private final AppConfigurationMapper appConfigurationMapper;
     private final JwtService jwtService;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
@@ -60,6 +62,7 @@ public class AuthService {
     public LoginResponse register(RegisterRequest request) {
         String email = request.getNormalizedEmail();
         Instant acceptedAt = Instant.now();
+        AppConfiguration appConfiguration = resolveCurrentAppConfiguration();
 
         if (!request.isTermsAccepted() || !request.isPrivacyPolicyAccepted()) {
             throw new BadRequestException("Terms and Privacy Policy must be accepted.");
@@ -79,8 +82,8 @@ public class AuthService {
                 .privacyPolicyAccepted(true)
                 .termsAcceptedAt(acceptedAt)
                 .privacyPolicyAcceptedAt(acceptedAt)
-                .termsVersion(TERMS_VERSION)
-                .privacyPolicyVersion(PRIVACY_POLICY_VERSION)
+                .termsVersion(appConfiguration.getTermsVersion())
+                .privacyPolicyVersion(appConfiguration.getPrivacyPolicyVersion())
                 .build();
 
         User savedUser = userRepository.save(user);
@@ -108,6 +111,11 @@ public class AuthService {
                 .tokenType("Bearer")
                 .user(userMapper.toResponse(user))
                 .build();
+    }
+
+    private AppConfiguration resolveCurrentAppConfiguration() {
+        return appConfigurationRepository.findGlobal()
+                .orElseGet(appConfigurationMapper::createDefaultEntity);
     }
 }
 

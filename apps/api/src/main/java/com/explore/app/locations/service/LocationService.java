@@ -12,11 +12,13 @@ import com.explore.app.locations.model.LocationStatus;
 import com.explore.app.locations.repository.LocationRepository;
 import com.explore.app.shared.BadRequestException;
 import com.explore.app.shared.CategoryNormalizer;
+import com.explore.app.shared.NotFoundException;
 import com.explore.app.user.model.Role;
 import com.explore.app.user.model.User;
 import com.explore.app.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -24,7 +26,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,6 +37,7 @@ import java.util.Locale;
 public class LocationService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LocationService.class);
+    public static final int DEFAULT_PAGE_SIZE = 100;
 
     private final LocationRepository locationRepository;
     private final LocationMapper locationMapper;
@@ -43,7 +45,11 @@ public class LocationService {
     private final UserRepository userRepository;
 
     public List<LocationResponse> getPublicLocations() {
-        return getActiveLocations();
+        return getPublicLocations(0, DEFAULT_PAGE_SIZE);
+    }
+
+    public List<LocationResponse> getPublicLocations(int page, int size) {
+        return getActiveLocations(page, size);
     }
 
     public LocationResponse getPublicLocationById(Long id) {
@@ -51,43 +57,61 @@ public class LocationService {
     }
 
     public List<LocationResponse> getPublicLocationsByCategory(String category) {
-        return locationRepository.findByCategoryIgnoreCaseAndStatus(
+        return getPublicLocationsByCategory(category, 0, DEFAULT_PAGE_SIZE);
+    }
+
+    public List<LocationResponse> getPublicLocationsByCategory(String category, int page, int size) {
+        return locationRepository.findByCategoryIgnoreCaseAndStatusOrderByCreatedAtDescIdDesc(
                         normalizeCategoryFilter(category),
-                        LocationStatus.ACTIVE)
+                        LocationStatus.ACTIVE,
+                        createPageRequest(page, size))
+                .getContent()
                 .stream()
                 .map(locationMapper::toResponse)
                 .toList();
     }
 
     public List<LocationResponse> getPublicLocationsByCounty(String county) {
-        return locationRepository.findByCountyIgnoreCaseAndStatus(
+        return getPublicLocationsByCounty(county, 0, DEFAULT_PAGE_SIZE);
+    }
+
+    public List<LocationResponse> getPublicLocationsByCounty(String county, int page, int size) {
+        return locationRepository.findByCountyIgnoreCaseAndStatusOrderByCreatedAtDescIdDesc(
                         normalizeFilter(county, "county"),
-                        LocationStatus.ACTIVE)
+                        LocationStatus.ACTIVE,
+                        createPageRequest(page, size))
+                .getContent()
                 .stream()
                 .map(locationMapper::toResponse)
                 .toList();
     }
 
     public List<LocationResponse> getPublicNearbyLocations(double latitude, double longitude, double radiusMeters) {
+        return getPublicNearbyLocations(latitude, longitude, radiusMeters, 0, DEFAULT_PAGE_SIZE);
+    }
+
+    public List<LocationResponse> getPublicNearbyLocations(
+            double latitude,
+            double longitude,
+            double radiusMeters,
+            int page,
+            int size) {
         validateRadius(radiusMeters);
 
-        return locationRepository.findByStatus(LocationStatus.ACTIVE)
-                .stream()
-                .filter(location -> location.getLatitude() != null && location.getLongitude() != null)
-                .filter(location -> haversineMeters(
+        return locationRepository.findNearbyByStatus(
                         latitude,
                         longitude,
-                        location.getLatitude(),
-                        location.getLongitude()) <= radiusMeters)
+                        radiusMeters,
+                        LocationStatus.ACTIVE.name(),
+                        createPageRequest(page, size))
+                .getContent()
+                .stream()
                 .map(locationMapper::toResponse)
                 .toList();
     }
 
     public List<LocationResponse> getAllLocations() {
-        return locationRepository.findAll()
-                .stream()
-                .map(locationMapper::toResponse)
-                .toList();
+        return getPublicLocations();
     }
 
     public LocationResponse getLocationById(Long id) {
@@ -95,39 +119,49 @@ public class LocationService {
     }
 
     public List<LocationResponse> getActiveLocations() {
-        return locationRepository.findByStatus(LocationStatus.ACTIVE)
+        return getActiveLocations(0, DEFAULT_PAGE_SIZE);
+    }
+
+    public List<LocationResponse> getActiveLocations(int page, int size) {
+        return locationRepository.findByStatusOrderByCreatedAtDescIdDesc(
+                        LocationStatus.ACTIVE,
+                        createPageRequest(page, size))
+                .getContent()
                 .stream()
                 .map(locationMapper::toResponse)
                 .toList();
     }
 
     public List<LocationResponse> getLocationsByCategory(String category) {
-        return locationRepository.findByCategoryIgnoreCase(normalizeCategoryFilter(category))
+        return getLocationsByCategory(category, 0, DEFAULT_PAGE_SIZE);
+    }
+
+    public List<LocationResponse> getLocationsByCategory(String category, int page, int size) {
+        return locationRepository.findByCategoryIgnoreCaseOrderByCreatedAtDescIdDesc(
+                        normalizeCategoryFilter(category),
+                        createPageRequest(page, size))
+                .getContent()
                 .stream()
                 .map(locationMapper::toResponse)
                 .toList();
     }
 
     public List<LocationResponse> getLocationsByCounty(String county) {
-        return locationRepository.findByCountyIgnoreCase(normalizeFilter(county, "county"))
+        return getLocationsByCounty(county, 0, DEFAULT_PAGE_SIZE);
+    }
+
+    public List<LocationResponse> getLocationsByCounty(String county, int page, int size) {
+        return locationRepository.findByCountyIgnoreCaseOrderByCreatedAtDescIdDesc(
+                        normalizeFilter(county, "county"),
+                        createPageRequest(page, size))
+                .getContent()
                 .stream()
                 .map(locationMapper::toResponse)
                 .toList();
     }
 
     public List<LocationResponse> getNearbyLocations(double latitude, double longitude, double radiusMeters) {
-        validateRadius(radiusMeters);
-
-        return locationRepository.findAll()
-                .stream()
-                .filter(location -> location.getLatitude() != null && location.getLongitude() != null)
-                .filter(location -> haversineMeters(
-                        latitude,
-                        longitude,
-                        location.getLatitude(),
-                        location.getLongitude()) <= radiusMeters)
-                .map(locationMapper::toResponse)
-                .toList();
+        return getPublicNearbyLocations(latitude, longitude, radiusMeters);
     }
 
     @Transactional
@@ -326,7 +360,7 @@ public class LocationService {
 
     private User resolveRequiredAdminUser(String currentUserEmail) {
         User currentUser = userRepository.findByEmail(normalizeRequiredEmail(currentUserEmail))
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                .orElseThrow(() -> new NotFoundException("User not found"));
 
         if (currentUser.getRole() != Role.ADMIN) {
             throw new IllegalArgumentException("Only admins can manage location images");
@@ -347,12 +381,12 @@ public class LocationService {
 
     private Location findLocation(Long id) {
         return locationRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Location not found"));
+                .orElseThrow(() -> new NotFoundException("Location not found"));
     }
 
     private Location findActiveLocation(Long id) {
         return locationRepository.findByIdAndStatus(id, LocationStatus.ACTIVE)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Location not found"));
+                .orElseThrow(() -> new NotFoundException("Location not found"));
     }
 
     private String normalizeFilter(String value, String fieldName) {
@@ -382,17 +416,8 @@ public class LocationService {
         }
     }
 
-    private double haversineMeters(double latitude1, double longitude1, double latitude2, double longitude2) {
-        double earthRadiusMeters = 6_371_000d;
-        double latitudeDelta = Math.toRadians(latitude2 - latitude1);
-        double longitudeDelta = Math.toRadians(longitude2 - longitude1);
-
-        double a = Math.sin(latitudeDelta / 2) * Math.sin(latitudeDelta / 2)
-                + Math.cos(Math.toRadians(latitude1)) * Math.cos(Math.toRadians(latitude2))
-                * Math.sin(longitudeDelta / 2) * Math.sin(longitudeDelta / 2);
-
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return earthRadiusMeters * c;
+    private Pageable createPageRequest(int page, int size) {
+        return PageRequest.of(page, size);
     }
 
     private record NormalizedLocationImage(String url, String storagePath) {
